@@ -4278,6 +4278,18 @@ function AgentDashboard({ user, onNav, onPri }) {
     { n:"LaKeisha H.", xp:2840, r:1 }, { n:"Jordan (you)", xp:user.xp, r:2, me:true },
     { n:"Alex R.",     xp:1980, r:3 }, { n:"Nia W.",       xp:1750, r:4 },
   ];
+  // Daily insight — picks the most relevant coaching line for right now
+  const insight = (() => {
+    const adh = liveAdh, str = user.streak||1, xpLeft = Math.max(0, xpToGold-user.xp);
+    const hr = new Date().getHours(), dow = new Date().getDay();
+    if (adh>=97)            return { icon:"🔥", tag:"MOMENTUM",      gc:["#F45D48","#EF9F27"], text:`${adh}% adherence right now — you're running a top-10% day on the floor. Keep the pace, don't let up.` };
+    if (str>=14)            return { icon:"⚡", tag:"ON A RUN",       gc:["#EF9F27","#F45D48"], text:`${str} days straight. That's not a habit anymore — it's your standard. This is what Gold Gustie looks like.` };
+    if (xpLeft<=600&&xpLeft>0) return { icon:"🎯", tag:"ALMOST THERE",gc:["#FFD700","#EF9F27"], text:`${xpLeft.toLocaleString()} XP from Gold Gustie. You're not chasing it anymore — it's right in front of you. ${goldLabel} is the target.` };
+    if (str>=7)             return { icon:"🏆", tag:"CONSISTENT",    gc:["#7F77DD","#0A8080"], text:`${str}-day streak puts you in the top 15% for floor consistency. That kind of reliability doesn't go unnoticed.` };
+    if (dow===1&&hr<13)     return { icon:"💪", tag:"NEW WEEK",      gc:["#0A8080","#7F77DD"], text:`Fresh week. Your 30-day adherence is ${user.adherence}% — one of the steadiest rates on the floor. Week starts now.` };
+    if (hr>=15)             return { icon:"✦",  tag:"FINISH LINE",   gc:["#7F77DD","#F45D48"], text:`You're in the final stretch. ${user.adherence}% adherence this month — close it the same way you opened it.` };
+    return                         { icon:"✦",  tag:"PRISM INSIGHT", gc:["#0A8080","#7F77DD"], text:`${user.adherence}% adherence and a ${str}-day streak. You're running ahead of the floor average. Keep stacking.` };
+  })();
   return (
     <div>
       {/* ─── GREETING ─── */}
@@ -4286,6 +4298,31 @@ function AgentDashboard({ user, onNav, onPri }) {
           <TW text={`${new Date().getHours()<12?"Good morning":new Date().getHours()<17?"Good afternoon":"Good evening"}, ${user.name.split(" ")[0]}`} speed={38} />
         </div>
         <div style={{ fontSize:13, color:C.tx2 }}>{user.pillar} · {TODAY_LABEL} · {user.streak}-day streak 🔥 · {user.adherence}% adherence</div>
+      </div>
+
+      {/* ─── DAILY INSIGHT CARD ─── */}
+      <div style={{ background:`linear-gradient(135deg,${insight.gc[0]}1C 0%,${insight.gc[1]}0A 100%)`, border:`.5px solid ${insight.gc[0]}45`, borderRadius:18, padding:"20px 22px", marginBottom:14, position:"relative", overflow:"hidden", animation:"fade-up .4s ease .06s both" }}>
+        {/* ambient glow */}
+        <div style={{ position:"absolute", top:-40, right:-40, width:130, height:130, borderRadius:"50%", background:`${insight.gc[0]}14`, filter:"blur(28px)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", bottom:-20, left:0, width:"60%", height:60, background:`${insight.gc[1]}08`, filter:"blur(20px)", pointerEvents:"none" }} />
+        {/* shimmer sweep */}
+        <div style={{ position:"absolute", inset:0, background:`linear-gradient(105deg,transparent 30%,${insight.gc[0]}09 50%,transparent 70%)`, animation:"shimmer 4s ease-in-out infinite", pointerEvents:"none" }} />
+        {/* tag row */}
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:13, position:"relative" }}>
+          <span style={{ fontSize:19 }}>{insight.icon}</span>
+          <span style={{ fontSize:10, fontWeight:800, color:insight.gc[0], letterSpacing:".12em", background:`${insight.gc[0]}1A`, border:`.5px solid ${insight.gc[0]}40`, padding:"3px 9px", borderRadius:6 }}>{insight.tag}</span>
+          <span style={{ fontSize:10, color:C.tx2, marginLeft:"auto" }}>today's read · powered by Prism</span>
+        </div>
+        {/* the line */}
+        <div style={{ fontSize:15, fontWeight:600, color:C.tx0, lineHeight:1.6, marginBottom:14, position:"relative", letterSpacing:"-.01em" }}>
+          "{insight.text}"
+        </div>
+        {/* stat pills */}
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", position:"relative" }}>
+          <span style={{ fontSize:11, fontWeight:600, color:liveAdh>=95?"#0AC8A0":C.amber, background:`${liveAdh>=95?"#0AC8A0":C.amber}10`, border:`.5px solid ${liveAdh>=95?"#0AC8A0":C.amber}28`, padding:"3px 10px", borderRadius:20 }}>{liveAdh}% adherence</span>
+          <span style={{ fontSize:11, fontWeight:600, color:C.amber, background:`${C.amber}10`, border:`.5px solid ${C.amber}28`, padding:"3px 10px", borderRadius:20 }}>🔥 {user.streak}d streak</span>
+          {user.xp>=2500 && <span style={{ fontSize:11, fontWeight:600, color:"#C0C0C0", background:"rgba(192,192,192,.07)", border:".5px solid rgba(192,192,192,.2)", padding:"3px 10px", borderRadius:20 }}>Silver Gustie</span>}
+        </div>
       </div>
 
       {/* ─── 1. LIVE SELF-AWARENESS STRIP ─── */}
@@ -4501,10 +4538,14 @@ function AgentDashboard({ user, onNav, onPri }) {
         <div style={{ fontSize:14, fontWeight:600, color:C.tx0, marginBottom:10 }}>My performance</div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8 }}>
           {[
-            { period:"Today",      vol:47,    aht:"8:12", adh:"97%", sl:"84%", color:C.kale   },
-            { period:"This week",  vol:198,   aht:"8:05", adh:"96%", sl:"82%", color:C.purple  },
-            { period:"This month", vol:842,   aht:"7:58", adh:"95%", sl:"81%", color:C.amber   },
-            { period:"YTD",        vol:"4.2K",aht:"8:18", adh:"94%", sl:"80%", color:C.guava   },
+            { period:"Today",      vol:47,    aht:"8:12", adh:"97%", sl:"84%", color:C.kale,
+              trend:"↑ Adh +2pp · AHT −8s", trendGood:true },
+            { period:"This week",  vol:198,   aht:"8:05", adh:"96%", sl:"82%", color:C.purple,
+              trend:"↑ Vol +12% · AHT −13s", trendGood:true },
+            { period:"This month", vol:842,   aht:"7:58", adh:"95%", sl:"81%", color:C.amber,
+              trend:"↑ Vol +7% · AHT −20s",  trendGood:true },
+            { period:"YTD",        vol:"4.2K",aht:"8:18", adh:"94%", sl:"80%", color:C.guava,
+              trend:"↑ Adh +3pp · Vol +22%", trendGood:true },
           ].map(s=>(
             <div key={s.period} style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:12, padding:12, borderTop:`2px solid ${s.color}` }}>
               <div style={{ fontSize:12, fontWeight:600, color:s.color, marginBottom:8, textTransform:"uppercase", letterSpacing:".06em" }}>{s.period}</div>
@@ -4514,6 +4555,7 @@ function AgentDashboard({ user, onNav, onPri }) {
                 <div><div style={{ fontSize:11, color:C.tx2 }}>Adherence</div><div style={{ fontSize:17, fontWeight:700, color:parseFloat(s.adh)>=95?"#0AC8A0":C.amber }}>{s.adh}</div></div>
                 <div><div style={{ fontSize:11, color:C.tx2 }}>SL Contrib</div><div style={{ fontSize:17, fontWeight:700, color:parseFloat(s.sl)>=80?"#0AC8A0":C.amber }}>{s.sl}</div></div>
               </div>
+              <div style={{ marginTop:8, paddingTop:7, borderTop:`.5px solid ${C.bd}`, fontSize:10, color:s.trendGood?"#0AC8A0":C.amber, fontWeight:600, letterSpacing:".02em" }}>{s.trend}</div>
             </div>
           ))}
         </div>
