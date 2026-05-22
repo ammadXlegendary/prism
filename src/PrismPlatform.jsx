@@ -5620,44 +5620,75 @@ function ApprovalsView() {
 // ══════════════════════════════════════════════════════════════
 // ACHIEVEMENTS
 // ══════════════════════════════════════════════════════════════
+// XP SYSTEM
+// Daily XP: base 10 + adherence bonus ((adh-85)*2, up to +30) + contacts (×0.5) + AHT bonus (+5 if <7:30)
+// Streak multiplier: 1.0× days 1-6 | 1.5× days 7-13 | 2.0× days 14+
+// Typical range: 40-80 XP/day average | 80-190 XP/day peak (2× multiplier + all challenges)
+// Tier thresholds: Rookie 0 | Bronze Gustie 1,000 | Silver Gustie 2,500 | Gold Gustie 5,000 | Platinum 10,000
+// At avg 60 XP/day: Bronze ~17d | Silver ~42d | Gold ~83d | Platinum ~167d
 const ALL_BADGES = {
   agent: [
-    { id: "streak",    icon: "🔥", name: "On Fire",          desc: "Multi-day adherence streak",        color: "#F45D48", xp: 100, tiers: [7, 14, 30]   },
-    { id: "top10",     icon: "🎯", name: "Top 10%",           desc: "Weekly leaderboard top 10%",        color: "#0A8080", xp: 150, tiers: [1, 3, 5]    },
-    { id: "speed",     icon: "⚡", name: "Speed Responder",   desc: "Respond to alerts in under 2min",   color: "#EF9F27", xp: 75,  tiers: [5, 20, 50]   },
-    { id: "perfect",   icon: "💯", name: "Perfect Week",      desc: "100% adherence for a full week",    color: "#7F77DD", xp: 200, tiers: [1, 3, 10]   },
-    { id: "earlybird", icon: "🌅", name: "Early Bird",        desc: "Log in before shift starts",        color: "#0AC8A0", xp: 50,  tiers: [5, 25, 100]  },
-    { id: "scholar",   icon: "📚", name: "Scholar",           desc: "Complete training sessions",        color: "#F0997B", xp: 125, tiers: [1, 5, 10]   },
-    { id: "sensei",    icon: "📅", name: "Schedule Sensei",   desc: "Check schedule 5 days in a row",    color: "#AD1457", xp: 80,  tiers: [1, 3, 10]   },
-    { id: "iron",      icon: "🛡️", name: "Iron Attendance",  desc: "Zero unplanned absences",            color: "#1565C0", xp: 300, tiers: [30, 90, 180] },
+    { id:"streak",   icon:"🔥", name:"Streak Master",   desc:"Consecutive days of 95%+ adherence — the streak resets if you miss target.", color:"#F45D48", xp:150, tiers:[7,21,30],
+      why:"Every day you stay adherent is a day where your scheduled coverage actually showed up. Your streak is the floor's reliability score in human form." },
+    { id:"clockwork",icon:"🎯", name:"Clockwork",        desc:"Total days above 95% adherence, cumulative. The most fundamental metric on the floor.", color:"#0A8080", xp:175, tiers:[5,14,30],
+      why:"SL forecasts are built assuming 95% of agents will be where they're scheduled. When you hit it, the math works. When you don't, someone else pays for it." },
+    { id:"volume",   icon:"📞", name:"Contact Legend",   desc:"Total contacts handled since joining Prism. Every single one counted.", color:"#7F77DD", xp:100, tiers:[100,1000,5000],
+      why:"At 1,000 contacts you've helped the equivalent of a small town. At 5,000 you've moved the needle for an entire city. That's not just a number — it's impact." },
+    { id:"closer",   icon:"⚡", name:"The Closer",       desc:"Days where your average handle time stayed under 7:30. Fast, complete, no shortcuts.", color:"#EF9F27", xp:200, tiers:[1,5,20],
+      why:"Sub-7:30 AHT at quality means 1-2 more customers helped per hour vs. average. That compounds across a full shift into real SL difference." },
+    { id:"triple",   icon:"👑", name:"Triple Crown",     desc:"95%+ adherence + 50+ contacts + sub-7:30 AHT — all three in the same shift. The rarest single-day achievement.", color:"#FFD700", xp:500, tiers:[1,3,5],
+      why:"This combination is statistically rare. Adherence, volume, and efficiency all locked on the same day means you were in complete control from first call to last." },
+    { id:"grind",    icon:"✅", name:"Daily Grind",      desc:"Complete all 3 daily challenges. The small wins that compound into the big ones.", color:"#0AC8A0", xp:75,  tiers:[1,5,20],
+      why:"Daily challenges are built around what the floor needs that day. Sweeping all three means you weren't just working — you were working in the right direction." },
+    { id:"pioneer",  icon:"🚀", name:"Prism Pioneer",   desc:"Among the first Gusties using Prism before public rollout. You were here before it was cool.", color:"#C8A060", xp:250, tiers:[1,3,10],
+      why:"Early adopters shaped this product. The bugs you found, the flows you tested, the feedback you gave — that's in the DNA of what Prism became." },
+    { id:"anchor",   icon:"🏗️", name:"Floor Anchor",    desc:"Days ranked in the top 5 for floor-wide adherence. Out of 736 agents.", color:"#AD1457", xp:300, tiers:[5,20,60],
+      why:"Top-5 adherence on a 736-agent floor puts you in the top 0.7%. When you're anchoring that list, the SL model doesn't have to compensate for anyone." },
   ],
   manager: [
-    { id: "fast",    icon: "⚡", name: "Fast Approver",  desc: "All requests approved within 4hrs",  color: "#EF9F27", xp: 100, tiers: [10, 50, 200] },
-    { id: "slg",     icon: "🛡️", name: "SL Guardian",   desc: "Team SL above 85% for full week",    color: "#0A8080", xp: 200, tiers: [1, 4, 12]   },
-    { id: "zero",    icon: "✅", name: "Zero Backlog",   desc: "Approval queue cleared same day",     color: "#0AC8A0", xp: 150, tiers: [5, 20, 50]  },
-    { id: "lead",    icon: "🏆", name: "Team Leader",   desc: "Team avg adherence above 95%",        color: "#7F77DD", xp: 250, tiers: [1, 4, 12]   },
-    { id: "coach",   icon: "🎓", name: "Coach",         desc: "Team members earn new badges",        color: "#F0997B", xp: 75,  tiers: [5, 20, 50]  },
-    { id: "king",    icon: "📊", name: "Coverage King", desc: "Pillar coverage above 90% all week",  color: "#AD1457", xp: 175, tiers: [1, 4, 12]   },
+    { id:"approver", icon:"⚡", name:"Fast Approver",   desc:"Requests processed and responded to within 4 hours of submission.", color:"#EF9F27", xp:125, tiers:[10,50,200],
+      why:"Agents making schedule decisions need fast answers. 4-hour turnaround keeps the floor flexible and agents feeling like their time is respected." },
+    { id:"guardian", icon:"🛡️", name:"SL Guardian",    desc:"Full weeks where your team's SL held above 85% every single day.", color:"#0A8080", xp:250, tiers:[1,4,12],
+      why:"A clean week above 85% SL means you out-managed every variance that came at you — staffing, adherence, call spikes, intraday pivots. All of it." },
+    { id:"leader",   icon:"🏆", name:"Team Leader",    desc:"Weeks where your team's average adherence exceeded 95%.", color:"#7F77DD", xp:300, tiers:[1,4,12],
+      why:"95%+ team adherence means your agents trust the schedule and you've created an environment where showing up is the norm, not the exception." },
+    { id:"zero",     icon:"✅", name:"Zero Backlog",   desc:"Days where you cleared the full approval queue before EOD.", color:"#0AC8A0", xp:150, tiers:[5,20,50],
+      why:"A cleared queue means no agent went home without an answer on their request. That's not just efficiency — that's respect." },
+    { id:"coach",    icon:"🎓", name:"Coach",          desc:"Your team members who earned new achievement badges this period.", color:"#F0997B", xp:100, tiers:[5,20,50],
+      why:"When your team earns badges, your coaching is landing. This badge tracks your floor in bloom." },
+    { id:"coverage", icon:"📊", name:"Coverage King",  desc:"Full weeks where pillar coverage stayed above 90% every day.", color:"#AD1457", xp:200, tiers:[1,4,12],
+      why:"90%+ coverage all week with no gaps means nothing fell through — no call spikes caught you short. Perfect execution." },
   ],
   wfm: [
-    { id: "oracle",  icon: "🔮", name: "Oracle",        desc: "Forecast accuracy above 95%",         color: "#0A8080", xp: 300, tiers: [1, 4, 12]   },
-    { id: "slayer",  icon: "⚔️", name: "IEX Slayer",   desc: "Migration milestones completed",       color: "#F45D48", xp: 500, tiers: [2, 5, 8]    },
-    { id: "auto",    icon: "🤖", name: "Automator",     desc: "Auto-approvals processed",            color: "#7F77DD", xp: 100, tiers: [10, 50, 200] },
-    { id: "pub",     icon: "📡", name: "Publisher",     desc: "Schedules published on time",         color: "#EF9F27", xp: 150, tiers: [4, 20, 52]  },
-    { id: "data",    icon: "📈", name: "Data Analyst",  desc: "SL miss reports actioned",            color: "#0AC8A0", xp: 75,  tiers: [10, 50, 200] },
-    { id: "arch",    icon: "🏗️", name: "Architect",    desc: "Live connections configured",         color: "#AD1457", xp: 200, tiers: [3, 8, 12]   },
+    { id:"oracle",    icon:"🔮", name:"Oracle",         desc:"Weeks with forecast accuracy above 95% WMAPE — ClearCast validated.", color:"#0A8080", xp:350, tiers:[1,4,12],
+      why:"95%+ WMAPE means your model almost never surprises the floor. Managers can trust the staffing plan and agents get schedules that reflect reality." },
+    { id:"slayer",    icon:"⚔️", name:"IEX Slayer",    desc:"SmartSync → Prism migration milestones completed and signed off.", color:"#F45D48", xp:500, tiers:[2,5,8],
+      why:"Every milestone is a system that no longer needs manual intervention. You're rebuilding the foundation of how CX operates — from the ground up." },
+    { id:"publisher", icon:"📡", name:"Publisher",     desc:"Schedules published on-time with zero rollbacks required.", color:"#EF9F27", xp:175, tiers:[4,20,52],
+      why:"On-time clean publishes give agents the week they planned for. Late or rolled-back schedules cascade into compliance violations and agent frustration." },
+    { id:"automator", icon:"🤖", name:"Automator",     desc:"Approvals processed through Prism's rules engine — no manual touch.", color:"#7F77DD", xp:100, tiers:[10,50,200],
+      why:"Every auto-approval is a decision that didn't need a human — which means that human was doing something that actually required judgment." },
+    { id:"analyst",   icon:"📈", name:"Data Analyst",  desc:"SL miss patterns identified and actioned back into ClearCast.", color:"#0AC8A0", xp:100, tiers:[10,50,200],
+      why:"SL misses that get actioned in the forecast engine reduce how often the floor gets caught short. You're building the model's institutional memory." },
+    { id:"architect", icon:"🏗️", name:"Architect",    desc:"Live connections configured, tested, and maintained in Prism.", color:"#AD1457", xp:250, tiers:[3,8,12],
+      why:"Every live connection is a data pipeline WFM didn't have to build manually. The Architect builds the nervous system of the entire operation." },
   ],
 };
 const BADGE_PROGRESS = {
-  AA:{ streak:2,top10:3,speed:1,perfect:1,earlybird:2,scholar:0,sensei:3,iron:1 },
-  AP:{ streak:1,top10:1,speed:2,perfect:0,earlybird:3,scholar:1,sensei:1,iron:0 },
-  AF:{ streak:3,top10:2,speed:3,perfect:2,earlybird:1,scholar:2,sensei:2,iron:1 },
-  CB:{ fast:2,slg:1,zero:3,lead:1,coach:2,king:1 },
-  JK:{ fast:1,slg:2,zero:1,lead:0,coach:1,king:2 },
-  AB:{ fast:3,slg:2,zero:2,lead:2,coach:3,king:1 },
-  AW:{ oracle:2,slayer:2,auto:3,pub:2,data:1,arch:1 },
-  TZ:{ oracle:1,slayer:1,auto:2,pub:3,data:3,arch:0 },
-  DS:{ oracle:3,slayer:2,auto:1,pub:2,data:2,arch:2 },
+  // Agents — IDs match new badge set
+  AA:{ streak:1, clockwork:2, volume:1, closer:1, triple:0, grind:1, pioneer:1, anchor:1 },
+  AP:{ streak:1, clockwork:1, volume:1, closer:1, triple:0, grind:1, pioneer:1, anchor:0 },
+  AF:{ streak:2, clockwork:2, volume:2, closer:2, triple:1, grind:2, pioneer:1, anchor:2 },
+  // Managers
+  CB:{ approver:2, guardian:1, leader:1, zero:3, coach:2, coverage:1 },
+  JK:{ approver:1, guardian:2, leader:1, zero:1, coach:1, coverage:2 },
+  AB:{ approver:3, guardian:2, leader:2, zero:2, coach:3, coverage:2 },
+  // WFM
+  AW:{ oracle:2, slayer:2, automator:3, publisher:2, analyst:1, architect:1 },
+  TZ:{ oracle:1, slayer:1, automator:2, publisher:3, analyst:3, architect:0 },
+  DS:{ oracle:3, slayer:2, automator:1, publisher:2, analyst:2, architect:2 },
+  DP:{ oracle:1, slayer:1, automator:1, publisher:1, analyst:2, architect:1 },
+  BB:{ oracle:2, slayer:0, automator:2, publisher:1, analyst:3, architect:1 },
 };
 const LEADERBOARDS = {
   agent:  [{n:"Achebe Franklin",xp:2840,pillar:"Premier DSA",streak:21},{n:"Aaliyah Ali",xp:2210,pillar:"BenOps",streak:14},{n:"Anthony Piper",xp:1980,pillar:"Payroll & Taxes",streak:7},{n:"Briana Perez",xp:1750,pillar:"Payroll & Taxes",streak:12},{n:"LaKeisha Hemphill",xp:1540,pillar:"Payroll & Taxes",streak:9},{n:"Mason Amling",xp:1380,pillar:"Payroll & Taxes",streak:7}],
@@ -5698,69 +5729,113 @@ function ParticleBurst({ color, small }) {
 
 function BadgeDetailModal({ badge, tier, onClose }) {
   const earned = tier > 0;
+  // 3-phase loot box reveal: sealed → burst → settled
+  const [phase, setPhase] = useState(earned ? "sealed" : "settled");
   const [burst, setBurst] = useState(false);
-  useEffect(() => { if (earned) { setBurst(true); const t = setTimeout(() => setBurst(false), 900); return () => clearTimeout(t); } }, []);
-  const RARITY = ["Common","Rare","Epic","Legendary"];
+  useEffect(() => {
+    if (!earned) return;
+    const t1 = setTimeout(() => { setPhase("burst"); setBurst(true); playSound("fanfare"); }, 650);
+    const t2 = setTimeout(() => { setBurst(false); setPhase("settled"); }, 1350);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
   const rarity = badge.xp >= 300 ? "Legendary" : badge.xp >= 200 ? "Epic" : badge.xp >= 100 ? "Rare" : "Common";
   const rarityColor = badge.xp >= 300 ? "#FFD700" : badge.xp >= 200 ? "#7F77DD" : badge.xp >= 100 ? "#0A8080" : C.tx2;
   const TIER_FLAVOR = ["Bronze Gustie", "Silver Gustie", "Gold Gustie"];
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", backdropFilter: "blur(12px)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: C.elev, border: `.5px solid ${earned ? badge.color + "55" : C.bd}`, borderRadius: 24, padding: 32, width: 360, maxWidth: "90vw", boxShadow: `0 40px 100px rgba(0,0,0,.7), 0 0 0 .5px ${earned ? badge.color + "20" : "transparent"}, ${earned ? `0 0 80px ${badge.color}14` : "none"}`, animation: "badge-zoom .28s cubic-bezier(.34,1.56,.64,1) both", position: "relative", overflow: "hidden" }}>
-      {/* Background glow */}
-      {earned && <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, background: `radial-gradient(ellipse,${badge.color}18,transparent 70%)`, pointerEvents: "none" }} />}
-      {/* Close */}
-      <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,.06)", border: `.5px solid ${C.bd}`, color: C.tx2, borderRadius: 8, width: 28, height: 28, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
-      {/* Big badge icon */}
-      <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <div style={{ position:"relative", width: 88, height: 88, borderRadius: 24, background: earned ? `${badge.color}20` : "rgba(255,255,255,.04)", border: `1.5px solid ${earned ? badge.color + "60" : C.bd}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, margin: "0 auto 14px", boxShadow: earned ? `0 0 32px ${badge.color}28` : "none", transition: "all .2s", overflow:"visible" }}>
-          {earned ? badge.icon : "🔒"}
-          {burst && <ParticleBurst color={badge.color} />}
-        </div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: earned ? C.tx0 : C.tx2, marginBottom: 5, letterSpacing: "-.02em" }}>{badge.name}</div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: rarityColor, background: `${rarityColor}14`, border: `.5px solid ${rarityColor}30`, padding: "3px 10px", borderRadius: 20 }}>{rarity}</span>
-          {earned && <span style={{ fontSize: 12, fontWeight: 700, color: TC[tier-1], background: `${TC[tier-1]}14`, border: `.5px solid ${TC[tier-1]}30`, padding: "3px 10px", borderRadius: 20 }}>{TIER_FLAVOR[tier-1]}</span>}
+
+  // Sealed phase — crate waiting to pop
+  if (phase === "sealed") {
+    return (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", backdropFilter:"blur(18px)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:18 }}>
+          <div style={{ fontSize:72, animation:"crate-shake .55s ease-in-out infinite", transformOrigin:"center bottom", userSelect:"none" }}>🎁</div>
+          <div style={{ fontSize:13, fontWeight:800, letterSpacing:".22em", color:"rgba(255,255,255,.38)", textTransform:"uppercase" }}>Achievement Unlocked</div>
         </div>
       </div>
-      {/* Description */}
-      <div style={{ background: "rgba(255,255,255,.03)", border: `.5px solid ${C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-        <div style={{ fontSize: 13, color: C.tx1, lineHeight: 1.65 }}>{badge.desc}</div>
-      </div>
-      {/* Tier progression */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.tx2, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Tier Progression</div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {badge.tiers.map((t, i) => {
-            const reached = i < tier;
-            const active = i === tier - 1;
-            return (
-              <div key={i} style={{ flex: 1, background: reached ? `${TC[i]}14` : "rgba(255,255,255,.03)", border: `.5px solid ${reached ? TC[i] + "40" : C.bd}`, borderRadius: 10, padding: "10px 8px", textAlign: "center", transition: "all .2s", boxShadow: active ? `0 0 18px ${TC[i]}20` : "none" }}>
-                <div style={{ fontSize: 17, marginBottom: 4 }}>{i === 0 ? "🥉" : i === 1 ? "🥈" : "🥇"}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: reached ? TC[i] : C.tx2 }}>{TL[i]}</div>
-                <div style={{ fontSize: 11, color: C.tx2, marginTop: 2 }}>× {t}</div>
-                {reached && <div style={{ fontSize: 10, color: TC[i], marginTop: 4, fontWeight: 600 }}>+{badge.xp * (i+1)} XP</div>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {/* XP reward */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: earned ? `${badge.color}0C` : "rgba(255,255,255,.02)", border: `.5px solid ${earned ? badge.color + "22" : C.bd}`, borderRadius: 10, padding: "10px 14px" }}>
-        <div>
-          <div style={{ fontSize: 11, color: C.tx2, marginBottom: 2 }}>XP per tier</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: earned ? badge.color : C.tx2 }}>+{badge.xp} XP</div>
-        </div>
-        {earned ? (
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, color: C.tx2, marginBottom: 2 }}>Total earned</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: badge.color }}>+{badge.xp * tier} XP</div>
+    );
+  }
+
+  // Burst phase — particles fly, icon appears
+  if (phase === "burst") {
+    return (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", backdropFilter:"blur(18px)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:18 }}>
+          <div style={{ position:"relative", width:100, height:100, borderRadius:28, background:`${badge.color}22`, border:`2px solid ${badge.color}88`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:52, boxShadow:`0 0 60px ${badge.color}55`, animation:"badge-zoom .28s cubic-bezier(.34,1.56,.64,1) both", overflow:"visible" }}>
+            {badge.icon}
+            {burst && <ParticleBurst color={badge.color} />}
           </div>
-        ) : (
-          <div style={{ fontSize: 12, color: C.tx2, fontStyle: "italic" }}>Not yet unlocked</div>
-        )}
+          <div style={{ fontSize:20, fontWeight:800, color:C.tx0, letterSpacing:"-.02em", animation:"badge-zoom .3s cubic-bezier(.34,1.56,.64,1) .08s both" }}>{badge.name}</div>
+        </div>
       </div>
+    );
+  }
+
+  // Settled phase — full detail modal
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.78)", backdropFilter:"blur(14px)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background:C.elev, border:`.5px solid ${earned ? badge.color+"55" : C.bd}`, borderRadius:24, padding:32, width:380, maxWidth:"92vw", maxHeight:"88vh", overflowY:"auto", boxShadow:`0 40px 100px rgba(0,0,0,.7), 0 0 80px ${earned ? badge.color+"14" : "transparent"}`, animation:"badge-zoom .28s cubic-bezier(.34,1.56,.64,1) both", position:"relative", overflow:"hidden" }}>
+        {/* Ambient glow */}
+        {earned && <div style={{ position:"absolute", top:-40, right:-40, width:220, height:220, background:`radial-gradient(ellipse,${badge.color}16,transparent 70%)`, pointerEvents:"none" }} />}
+        {/* Shimmer sweep */}
+        {earned && <div style={{ position:"absolute", inset:0, background:`linear-gradient(105deg,transparent 30%,${badge.color}08 50%,transparent 70%)`, animation:"shimmer 4s ease-in-out infinite", pointerEvents:"none" }} />}
+        {/* Close */}
+        <button onClick={onClose} style={{ position:"absolute", top:14, right:14, background:"rgba(255,255,255,.06)", border:`.5px solid ${C.bd}`, color:C.tx2, borderRadius:8, width:28, height:28, fontSize:15, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, zIndex:2 }}>×</button>
+        {/* Badge icon + name */}
+        <div style={{ textAlign:"center", marginBottom:20, position:"relative", zIndex:1 }}>
+          <div style={{ position:"relative", width:96, height:96, borderRadius:26, background:earned ? `${badge.color}22` : "rgba(255,255,255,.04)", border:`1.5px solid ${earned ? badge.color+"66" : C.bd}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:46, margin:"0 auto 14px", boxShadow:earned ? `0 0 36px ${badge.color}30` : "none", overflow:"visible" }}>
+            {earned ? badge.icon : "🔒"}
+          </div>
+          <div style={{ fontSize:19, fontWeight:800, color:earned ? C.tx0 : C.tx2, marginBottom:6, letterSpacing:"-.02em" }}>{badge.name}</div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+            <span style={{ fontSize:11, fontWeight:700, color:rarityColor, background:`${rarityColor}14`, border:`.5px solid ${rarityColor}30`, padding:"3px 10px", borderRadius:20 }}>{rarity}</span>
+            {earned && <span style={{ fontSize:11, fontWeight:700, color:TC[tier-1], background:`${TC[tier-1]}14`, border:`.5px solid ${TC[tier-1]}30`, padding:"3px 10px", borderRadius:20 }}>{TIER_FLAVOR[tier-1]}</span>}
+          </div>
+        </div>
+        {/* WHY IT MATTERS coaching section */}
+        {badge.why && (
+          <div style={{ background:earned ? `${badge.color}0D` : "rgba(255,255,255,.03)", border:`.5px solid ${earned ? badge.color+"28" : C.bd}`, borderRadius:12, padding:"13px 15px", marginBottom:14, position:"relative", zIndex:1 }}>
+            <div style={{ fontSize:10, fontWeight:800, color:earned ? badge.color : C.tx2, textTransform:"uppercase", letterSpacing:".14em", marginBottom:6 }}>Why It Matters</div>
+            <div style={{ fontSize:13, color:C.tx1, lineHeight:1.68 }}>{badge.why}</div>
+          </div>
+        )}
+        {/* Desc */}
+        <div style={{ background:"rgba(255,255,255,.03)", border:`.5px solid ${C.bd}`, borderRadius:12, padding:"11px 14px", marginBottom:14, position:"relative", zIndex:1 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.tx2, textTransform:"uppercase", letterSpacing:".1em", marginBottom:5 }}>What It Takes</div>
+          <div style={{ fontSize:13, color:C.tx1, lineHeight:1.65 }}>{badge.desc}</div>
+        </div>
+        {/* Tier progression */}
+        <div style={{ marginBottom:14, position:"relative", zIndex:1 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.tx2, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Tier Progression</div>
+          <div style={{ display:"flex", gap:6 }}>
+            {badge.tiers.map((t, i) => {
+              const reached = i < tier;
+              const active = i === tier - 1;
+              return (
+                <div key={i} style={{ flex:1, background:reached ? `${TC[i]}14` : "rgba(255,255,255,.03)", border:`.5px solid ${reached ? TC[i]+"40" : C.bd}`, borderRadius:10, padding:"10px 8px", textAlign:"center", boxShadow:active ? `0 0 20px ${TC[i]}22` : "none" }}>
+                  <div style={{ fontSize:17, marginBottom:4 }}>{i===0?"🥉":i===1?"🥈":"🥇"}</div>
+                  <div style={{ fontSize:12, fontWeight:700, color:reached ? TC[i] : C.tx2 }}>{TL[i]}</div>
+                  <div style={{ fontSize:11, color:C.tx2, marginTop:2 }}>×&nbsp;{t}</div>
+                  {reached && <div style={{ fontSize:10, color:TC[i], marginTop:4, fontWeight:600 }}>+{badge.xp*(i+1)} XP</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {/* XP footer */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:earned ? `${badge.color}0C` : "rgba(255,255,255,.02)", border:`.5px solid ${earned ? badge.color+"22" : C.bd}`, borderRadius:10, padding:"10px 14px", position:"relative", zIndex:1 }}>
+          <div>
+            <div style={{ fontSize:11, color:C.tx2, marginBottom:2 }}>XP per tier</div>
+            <div style={{ fontSize:17, fontWeight:700, color:earned ? badge.color : C.tx2 }}>+{badge.xp} XP</div>
+          </div>
+          {earned ? (
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:11, color:C.tx2, marginBottom:2 }}>Total earned</div>
+              <div style={{ fontSize:17, fontWeight:800, color:badge.color }}>+{badge.xp*tier} XP</div>
+            </div>
+          ) : (
+            <div style={{ fontSize:12, color:C.tx2, fontStyle:"italic" }}>Not yet unlocked</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -7793,6 +7868,7 @@ export default function PrismPlatform() {
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         @keyframes card-rise { from{opacity:0;transform:translateY(18px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes badge-zoom { from{opacity:0;transform:scale(.82) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes crate-shake { 0%,100%{transform:rotate(0)scale(1)} 20%{transform:rotate(-3deg)scale(1.03)} 40%{transform:rotate(3deg)scale(1.03)} 60%{transform:rotate(-2deg)scale(1.01)} 80%{transform:rotate(2deg)scale(1.01)} }
         @keyframes pri-wave { 0%,100%{height:4px;opacity:.45} 50%{height:20px;opacity:1} }
         @keyframes pri-slide { from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:translateX(0)} }
         @keyframes count-rise { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
