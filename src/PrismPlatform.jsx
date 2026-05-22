@@ -4213,32 +4213,110 @@ function AgentDashboard({ user, onNav, onPri }) {
   const [adjType, setAdjType] = useState("swap");
   const [adjNote, setAdjNote] = useState("");
   const [adjSent, setAdjSent] = useState(false);
+  const [liveTick, setLiveTick] = useState(0);
+  const [refSection, setRefSection] = useState(null);
+  const [kudosPanelOpen, setKudosPanelOpen] = useState(false);
+  const [kudosTo, setKudosTo] = useState("LaKeisha H.");
+  const [kudosMsg, setKudosMsg] = useState("");
+  const [kudosSent, setKudosSent] = useState(false);
+  const [receivedKudos] = useState([
+    { from:"Marcus Webb",  type:"🎯", msg:"Crushed that escalation today — nicely handled!", time:"2h ago",   ck:"kale"   },
+    { from:"Ashley Dickey",type:"💜", msg:"Always so helpful on the floor, appreciate you",  time:"Yesterday",ck:"purple" },
+    { from:"LaKeisha H.",  type:"⚡", msg:"Fastest AHT on the team this week, keep it up!",  time:"3d ago",   ck:"amber"  },
+  ]);
+  useEffect(() => {
+    const id = setInterval(() => setLiveTick(t => t + 1), 5000);
+    return () => clearInterval(id);
+  }, []);
   const agent = ALL_AGENTS.find(a => a.n === user.agentName);
   const hasSched = !!agent;
   const curSeg = agent ? agent.segs.find(s => s.sh <= NOW_H && s.eh > NOW_H) : null;
   const nextSeg = agent ? agent.segs.find(s => s.sh > NOW_H) : null;
+  const liveAdh = Math.min(99, (user.adherence||94) + (liveTick%7===0?-1:liveTick%11===0?1:0));
+  const liveAHT = `${8}:${String(((liveTick*17+12)%59)).padStart(2,"0")}`;
+  const liveContacts = 47 + Math.floor(liveTick * 0.4);
+  const stateMin = Math.max(1, Math.floor(((NOW_H%1)*60 + liveTick*0.08) % 55) + 2);
+  const xpToGold = 5000;
+  const goldPct = Math.min(99, Math.round(user.xp / xpToGold * 100));
+  const monthsLeft = Math.max(1, Math.ceil((xpToGold - user.xp) / 420));
+  const goldDate = new Date(); goldDate.setMonth(goldDate.getMonth() + monthsLeft);
+  const goldLabel = goldDate.toLocaleDateString("en-US", { month:"short", year:"numeric" });
+  const teamPresence = [
+    { n:"Ashley Dickey", status:"on",  seg:"Phone", captain:false, sup:false },
+    { n:"LaKeisha H.",   status:"on",  seg:"Email", captain:true,  sup:false },
+    { n:"Anthony Piper", status:"on",  seg:"Phone", captain:false, sup:false },
+    { n:"Marcus Webb",   status:"on",  seg:"Ops",   captain:false, sup:true  },
+    { n:"Nia W.",        status:"on",  seg:"Break", captain:false, sup:false },
+    { n:"Briana Perez",  status:"off", seg:null,    captain:false, sup:false },
+    { n:"Mason Amling",  status:"off", seg:null,    captain:false, sup:false },
+  ];
+  const onTeamCount  = teamPresence.filter(m=>m.status==="on").length;
+  const breakCount   = teamPresence.filter(m=>m.seg==="Break").length;
+  const offCount     = teamPresence.filter(m=>m.status==="off").length;
+  const floorSup     = teamPresence.find(m=>m.sup);
+  const quickRef = [
+    { id:"escalation", icon:"⚡", label:"Escalation Guide", items:[
+      { t:"Tier 1 → Tier 2",    d:"Billing disputes >$500 · Payroll errors · Legal threats" },
+      { t:"Escalation script",  d:'"I understand — let me connect you with a specialist who can resolve this."' },
+      { t:"Warm transfer tip",  d:"Brief the next agent on hold — 30-second summary before transfer" },
+      { t:"Manager on-call",    d:"Marcus Webb ext. 4021 · or ping via Prism" },
+    ]},
+    { id:"scripts", icon:"💬", label:"Quick Scripts", items:[
+      { t:"Opening",     d:'"Thank you for calling Gusto, this is Jordan. How can I help you today?"' },
+      { t:"Hold",        d:'"May I place you on a brief hold while I look into this?"' },
+      { t:"Empathy",     d:'"I completely understand your frustration — let me take care of this for you."' },
+      { t:"Close",       d:'"Is there anything else I can help you with today? Have a great day!"' },
+    ]},
+    { id:"policies", icon:"📋", label:"Key Policies", items:[
+      { t:"Refund window",       d:"30-day standard · 60-day with manager approval · None after 90 days" },
+      { t:"Data verification",   d:"Verify last 4 SSN + company name before account access" },
+      { t:"Repeat contacts",     d:"3rd contact in 7 days → auto-flag for case review" },
+      { t:"After-hours hand-off",d:"Forward urgent to on-call specialist (Slack: #cx-oncall)" },
+    ]},
+  ];
   const board = [
-    { n: "LaKeisha H.", xp: 2840, r: 1 }, { n: "Jordan (you)", xp: user.xp, r: 2, me: true },
-    { n: "Alex R.", xp: 1980, r: 3 }, { n: "Nia W.", xp: 1750, r: 4 },
+    { n:"LaKeisha H.", xp:2840, r:1 }, { n:"Jordan (you)", xp:user.xp, r:2, me:true },
+    { n:"Alex R.",     xp:1980, r:3 }, { n:"Nia W.",       xp:1750, r:4 },
   ];
   return (
     <div>
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: C.tx0, marginBottom: 4, letterSpacing: "-.02em" }}>
+      {/* ─── GREETING ─── */}
+      <div style={{ marginBottom:16 }}>
+        <div style={{ fontSize:22, fontWeight:700, color:C.tx0, marginBottom:4, letterSpacing:"-.02em" }}>
           <TW text={`${new Date().getHours()<12?"Good morning":new Date().getHours()<17?"Good afternoon":"Good evening"}, ${user.name.split(" ")[0]}`} speed={38} />
         </div>
-        <div style={{ fontSize: 13, color: C.tx2 }}>{user.pillar} · {TODAY_LABEL} · {user.streak}-day streak 🔥 · {user.adherence}% adherence</div>
+        <div style={{ fontSize:13, color:C.tx2 }}>{user.pillar} · {TODAY_LABEL} · {user.streak}-day streak 🔥 · {user.adherence}% adherence</div>
       </div>
 
-      {/* Quick actions */}
+      {/* ─── 1. LIVE SELF-AWARENESS STRIP ─── */}
+      <div style={{ background:C.card, border:`.5px solid ${C.kale}30`, borderRadius:14, padding:"11px 16px", marginBottom:14, display:"flex", alignItems:"center", gap:6, animation:"fade-up .4s ease .05s both", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, background:`linear-gradient(90deg,${C.kale}06,transparent 60%)`, pointerEvents:"none" }} />
+        <div style={{ width:7, height:7, borderRadius:"50%", background:C.kale, boxShadow:`0 0 8px ${C.kale}`, flexShrink:0, animation:"lp 1.4s ease-in-out infinite" }} />
+        <div style={{ fontSize:11, fontWeight:700, color:C.kale, letterSpacing:".08em", flexShrink:0, marginRight:6 }}>LIVE</div>
+        {[
+          { label:"AHT",        val:liveAHT,           sub:null,              color:C.tx0  },
+          { label:"Adherence",  val:`${liveAdh}%`,     sub:null,              color:liveAdh>=95?"#0AC8A0":C.amber },
+          { label:"State time", val:`${stateMin}m`,    sub:curSeg?.a||"Idle", color:curSeg?ac(curSeg.a):C.tx2 },
+          { label:"Contacts",   val:String(liveContacts), sub:"today",        color:C.tx0  },
+        ].map((m,i) => (
+          <div key={m.label} style={{ flex:1, textAlign:"center", borderLeft:`1px solid ${C.bd}`, paddingLeft:8 }}>
+            <div style={{ fontSize:10, color:C.tx2, marginBottom:1 }}>{m.label}</div>
+            <div key={`${m.val}-${liveTick}`} style={{ fontSize:16, fontWeight:700, color:m.color, lineHeight:1, animation:"val-pop .3s ease" }}>{m.val}</div>
+            {m.sub && <div style={{ fontSize:10, color:C.tx2, marginTop:1 }}>{m.sub}</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* ─── QUICK ACTIONS ─── */}
       <div style={{ display:"flex", gap:7, marginBottom:14, flexWrap:"wrap", animation:"fade-up .4s ease .1s both" }}>
         {[
-          { icon:"⇄", label:"Swap shift",        color:C.kale,   action:() => onNav?.("swap") },
-          { icon:"📅", label:"Request adjustment", color:C.amber,  action:() => setSchedAdjOpen(true) },
-          { icon:"🏖️", label:"Request time off",  color:C.purple, action:() => onNav?.("timeoff") },
-          { icon:"✦",  label:"Ask Pri",            color:C.kale,   action:() => onPri?.() },
+          { icon:"⇄",  label:"Swap shift",         color:C.kale,   action:() => onNav?.("swap")       },
+          { icon:"📅",  label:"Request adjustment",  color:C.amber,  action:() => setSchedAdjOpen(true) },
+          { icon:"🏖️", label:"Request time off",    color:C.purple, action:() => onNav?.("timeoff")    },
+          { icon:"✦",   label:"Ask Pri",             color:C.kale,   action:() => onPri?.()             },
         ].map(a => (
-          <button key={a.label} onClick={a.action} style={{ padding:"8px 14px", borderRadius:10, background:`${a.color}0E`, border:`.5px solid ${a.color}25`, color:a.color, fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"all .15s" }}
+          <button key={a.label} onClick={a.action}
+            style={{ padding:"8px 14px", borderRadius:10, background:`${a.color}0E`, border:`.5px solid ${a.color}25`, color:a.color, fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"all .15s" }}
             onMouseEnter={e=>{e.currentTarget.style.background=`${a.color}1A`;e.currentTarget.style.borderColor=`${a.color}40`;}}
             onMouseLeave={e=>{e.currentTarget.style.background=`${a.color}0E`;e.currentTarget.style.borderColor=`${a.color}25`;}}>
             <span>{a.icon}</span>{a.label}
@@ -4246,54 +4324,63 @@ function AgentDashboard({ user, onNav, onPri }) {
         ))}
       </div>
 
+      {/* ─── 2. CURRENT SEGMENT + SMART NUDGE ─── */}
       {hasSched && curSeg && (
-        <div style={{ background: `${ac(curSeg.a)}18`, border: `.5px solid ${ac(curSeg.a)}44`, borderRadius: 14, padding: 16, marginBottom: 12, display: "flex", alignItems: "center", gap: 14, animation: "fade-up .5s ease .2s both" }}>
-          <div style={{ width: 46, height: 46, borderRadius: 12, background: `${ac(curSeg.a)}28`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
-            {curSeg.a === "Phone" ? "📞" : curSeg.a === "Break" ? "☕" : curSeg.a === "Lunch" ? "🍱" : "💬"}
+        <div style={{ background:`${ac(curSeg.a)}18`, border:`.5px solid ${ac(curSeg.a)}44`, borderRadius:14, padding:16, marginBottom:12, display:"flex", alignItems:"center", gap:14, animation:"fade-up .5s ease .2s both" }}>
+          <div style={{ width:46, height:46, borderRadius:12, background:`${ac(curSeg.a)}28`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
+            {curSeg.a==="Phone"?"📞":curSeg.a==="Break"?"☕":curSeg.a==="Lunch"?"🍱":"💬"}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: C.tx2, marginBottom: 3 }}>Right now · {fmtH(NOW_H)}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: C.tx0 }}>{curSeg.a}</div>
-            <div style={{ fontSize: 12, color: C.tx2, marginTop: 2 }}>{fmtH(curSeg.sh)} – {fmtH(curSeg.eh)}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:12, color:C.tx2, marginBottom:3 }}>Right now · {fmtH(NOW_H)}</div>
+            <div style={{ fontSize:18, fontWeight:700, color:C.tx0 }}>{curSeg.a}</div>
+            <div style={{ fontSize:12, color:C.tx2, marginTop:2 }}>{fmtH(curSeg.sh)} – {fmtH(curSeg.eh)}</div>
+            {nextSeg && Math.round((nextSeg.sh-NOW_H)*60) <= 12 && (
+              <div style={{ marginTop:7, padding:"5px 10px", borderRadius:8, background:`${C.amber}12`, border:`.5px solid ${C.amber}30`, fontSize:12, color:C.amber, fontWeight:600, display:"inline-flex", alignItems:"center", gap:5 }}>
+                <span>{nextSeg.a==="Break"?"☕":nextSeg.a==="Lunch"?"🍱":"⏰"}</span>
+                {nextSeg.a==="Break"?`Break in ${Math.round((nextSeg.sh-NOW_H)*60)}m — wrap up your current call`:
+                 nextSeg.a==="Lunch"?`Lunch in ${Math.round((nextSeg.sh-NOW_H)*60)}m — don't start a new ticket`:
+                 `${nextSeg.a} in ${Math.round((nextSeg.sh-NOW_H)*60)}m`}
+              </div>
+            )}
           </div>
-          {nextSeg && <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 11, color: C.tx2, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Next up</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: ac(nextSeg.a) }}>{nextSeg.a}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.amber, marginTop: 2 }}>{Math.round((nextSeg.sh - NOW_H) * 60)}m away</div>
+          {nextSeg && <div style={{ textAlign:"right", flexShrink:0 }}>
+            <div style={{ fontSize:11, color:C.tx2, textTransform:"uppercase", letterSpacing:".06em", marginBottom:3 }}>Next up</div>
+            <div style={{ fontSize:14, fontWeight:600, color:ac(nextSeg.a) }}>{nextSeg.a}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.amber, marginTop:2 }}>{Math.round((nextSeg.sh-NOW_H)*60)}m away</div>
           </div>}
         </div>
       )}
 
-      {/* Schedule Adjustment Modal */}
+      {/* ─── SCHEDULE ADJUSTMENT MODAL ─── */}
       {schedAdjOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", backdropFilter: "blur(8px)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center" }}
-          onClick={e => { if (e.target === e.currentTarget) { setSchedAdjOpen(false); setAdjSent(false); setAdjNote(""); } }}>
-          <div style={{ background: C.elev, border: `.5px solid ${C.bd}`, borderRadius: 18, padding: 26, width: 360, boxShadow: "0 32px 80px rgba(0,0,0,.6)", animation: "fade-up .22s ease both" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.65)", backdropFilter:"blur(8px)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={e=>{ if(e.target===e.currentTarget){ setSchedAdjOpen(false); setAdjSent(false); setAdjNote(""); } }}>
+          <div style={{ background:C.elev, border:`.5px solid ${C.bd}`, borderRadius:18, padding:26, width:360, boxShadow:"0 32px 80px rgba(0,0,0,.6)", animation:"fade-up .22s ease both" }}>
             {adjSent ? (
-              <div style={{ textAlign: "center", padding: "16px 0" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.tx0, marginBottom: 6 }}>Request submitted!</div>
-                <div style={{ fontSize: 13, color: C.tx2, marginBottom: 18 }}>Your WFM team will review and respond within 4 hours. You're a great Gustie for planning ahead.</div>
-                <button onClick={() => { setSchedAdjOpen(false); setAdjSent(false); setAdjNote(""); }} style={{ background: C.kale, color: "#fff", border: "none", borderRadius: 10, padding: "10px 24px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Done</button>
+              <div style={{ textAlign:"center", padding:"16px 0" }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>✅</div>
+                <div style={{ fontSize:15, fontWeight:700, color:C.tx0, marginBottom:6 }}>Request submitted!</div>
+                <div style={{ fontSize:13, color:C.tx2, marginBottom:18 }}>Your WFM team will review and respond within 4 hours. You're a great Gustie for planning ahead.</div>
+                <button onClick={()=>{ setSchedAdjOpen(false); setAdjSent(false); setAdjNote(""); }} style={{ background:C.kale, color:"#fff", border:"none", borderRadius:10, padding:"10px 24px", fontSize:14, fontWeight:600, cursor:"pointer" }}>Done</button>
               </div>
             ) : (
               <>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: C.tx0 }}>Request schedule adjustment</div>
-                  <button onClick={() => setSchedAdjOpen(false)} style={{ background: "none", border: "none", color: C.tx2, fontSize: 18, cursor: "pointer", lineHeight: 1 }}>×</button>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:C.tx0 }}>Request schedule adjustment</div>
+                  <button onClick={()=>setSchedAdjOpen(false)} style={{ background:"none", border:"none", color:C.tx2, fontSize:18, cursor:"pointer", lineHeight:1 }}>×</button>
                 </div>
-                <div style={{ fontSize: 12, color: C.tx2, marginBottom: 8 }}>Type</div>
-                <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-                  {[["swap","Shift swap"],["vto","Voluntary time off"],["ot","Overtime"],["adjust","Shift adjust"],["wfh","Work from home"]].map(([v,l]) => (
-                    <button key={v} onClick={() => setAdjType(v)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", background: adjType === v ? `${C.kale}22` : "rgba(255,255,255,.04)", color: adjType === v ? C.kale : C.tx2, border: `.5px solid ${adjType === v ? C.kale + "55" : C.bd}`, transition: "all .14s" }}>{l}</button>
+                <div style={{ fontSize:12, color:C.tx2, marginBottom:8 }}>Type</div>
+                <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+                  {[["swap","Shift swap"],["vto","Voluntary time off"],["ot","Overtime"],["adjust","Shift adjust"],["wfh","Work from home"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setAdjType(v)} style={{ padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:500, cursor:"pointer", background:adjType===v?`${C.kale}22`:"rgba(255,255,255,.04)", color:adjType===v?C.kale:C.tx2, border:`.5px solid ${adjType===v?C.kale+"55":C.bd}`, transition:"all .14s" }}>{l}</button>
                   ))}
                 </div>
-                <div style={{ fontSize: 12, color: C.tx2, marginBottom: 6 }}>Note to WFM <span style={{ color: "rgba(255,255,255,.2)" }}>(optional)</span></div>
-                <textarea value={adjNote} onChange={e => setAdjNote(e.target.value)} placeholder="e.g. Need to leave 2 hours early for a doctor's appointment" rows={3}
-                  style={{ width: "100%", background: "rgba(255,255,255,.04)", border: `.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, color: C.tx0, resize: "none", outline: "none", boxSizing: "border-box", lineHeight: 1.5 }} />
-                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button onClick={() => setSchedAdjOpen(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: "rgba(255,255,255,.05)", color: C.tx2, border: `.5px solid ${C.bd}`, fontSize: 14, cursor: "pointer" }}>Cancel</button>
-                  <button onClick={() => { setAdjSent(true); window.prismToast?.("Adjustment request sent to your manager.", "info"); }} style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: `linear-gradient(135deg,${C.kale},${C.kale}BB)`, color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: `0 6px 20px ${C.kale}30` }}>Submit request →</button>
+                <div style={{ fontSize:12, color:C.tx2, marginBottom:6 }}>Note to WFM <span style={{ color:"rgba(255,255,255,.2)" }}>(optional)</span></div>
+                <textarea value={adjNote} onChange={e=>setAdjNote(e.target.value)} placeholder="e.g. Need to leave 2 hours early for a doctor's appointment" rows={3}
+                  style={{ width:"100%", background:"rgba(255,255,255,.04)", border:`.5px solid ${C.bd}`, borderRadius:10, padding:"10px 12px", fontSize:13, color:C.tx0, resize:"none", outline:"none", boxSizing:"border-box", lineHeight:1.5 }} />
+                <div style={{ display:"flex", gap:8, marginTop:14 }}>
+                  <button onClick={()=>setSchedAdjOpen(false)} style={{ flex:1, padding:"10px 0", borderRadius:10, background:"rgba(255,255,255,.05)", color:C.tx2, border:`.5px solid ${C.bd}`, fontSize:14, cursor:"pointer" }}>Cancel</button>
+                  <button onClick={()=>{ setAdjSent(true); window.prismToast?.("Adjustment request sent to your manager.","info"); }} style={{ flex:2, padding:"10px 0", borderRadius:10, background:`linear-gradient(135deg,${C.kale},${C.kale}BB)`, color:"#fff", border:"none", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:`0 6px 20px ${C.kale}30` }}>Submit request →</button>
                 </div>
               </>
             )}
@@ -4301,82 +4388,108 @@ function AgentDashboard({ user, onNav, onPri }) {
         </div>
       )}
 
-      {hasSched && <div style={{ background: C.card, border: `.5px solid ${C.bd}`, borderRadius: 14, padding: 14, marginBottom: 12, animation: "fade-up .5s ease .3s both" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.tx0 }}>Today · {fmtH(agent.sh)} – {fmtH(agent.se)}</div>
-          <button onClick={() => setSchedAdjOpen(true)} style={{ fontSize: 11, fontWeight: 600, color: C.kale, background: `${C.kale}12`, border: `.5px solid ${C.kale}30`, borderRadius: 7, padding: "4px 10px", cursor: "pointer", transition: "all .14s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = `${C.kale}22`; }}
-            onMouseLeave={e => { e.currentTarget.style.background = `${C.kale}12`; }}>
-            Request adjustment
-          </button>
+      {/* ─── TODAY'S SCHEDULE ─── */}
+      {hasSched && <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:14, marginBottom:12, animation:"fade-up .5s ease .3s both" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+          <div style={{ fontSize:14, fontWeight:600, color:C.tx0 }}>Today · {fmtH(agent.sh)} – {fmtH(agent.se)}</div>
+          <button onClick={()=>setSchedAdjOpen(true)} style={{ fontSize:11, fontWeight:600, color:C.kale, background:`${C.kale}12`, border:`.5px solid ${C.kale}30`, borderRadius:7, padding:"4px 10px", cursor:"pointer", transition:"all .14s" }}
+            onMouseEnter={e=>e.currentTarget.style.background=`${C.kale}22`}
+            onMouseLeave={e=>e.currentTarget.style.background=`${C.kale}12`}>Request adjustment</button>
         </div>
-        <div style={{ display: "flex", height: 8, gap: 1, borderRadius: 4, overflow: "hidden", marginBottom: 10 }}>
-          {agent.segs.map((s, i) => (
-            <div key={i} style={{ flex: s.eh - s.sh, background: ac(s.a), position: "relative" }}>
-              {s.sh <= NOW_H && s.eh > NOW_H && <div style={{ position: "absolute", right: 0, top: 0, width: 2, height: "100%", background: "#fff", boxShadow: "0 0 6px #fff" }} />}
+        <div style={{ display:"flex", height:8, gap:1, borderRadius:4, overflow:"hidden", marginBottom:10 }}>
+          {agent.segs.map((s,i)=>(
+            <div key={i} style={{ flex:s.eh-s.sh, background:ac(s.a), position:"relative" }}>
+              {s.sh<=NOW_H&&s.eh>NOW_H && <div style={{ position:"absolute", right:0, top:0, width:2, height:"100%", background:"#fff", boxShadow:"0 0 6px #fff" }} />}
             </div>
           ))}
         </div>
-        {agent.segs.map((s, i) => {
-          const cur = s.sh <= NOW_H && s.eh > NOW_H;
-          return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 8px", borderRadius: 8, background: cur ? `${ac(s.a)}15` : "transparent", marginBottom: 3 }}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: ac(s.a), flexShrink: 0, boxShadow: cur ? `0 0 8px ${ac(s.a)}` : "none" }} />
-              <span style={{ fontSize: 12, fontWeight: cur ? 600 : 400, color: cur ? C.tx0 : C.tx1, flex: 1 }}>{s.a}</span>
-              <span style={{ fontSize: 11, color: C.tx2, fontFamily: "monospace" }}>{fmtH(s.sh)}–{fmtH(s.eh)}</span>
-              {cur && <span style={{ fontSize: 10, fontWeight: 700, color: ac(s.a), padding: "1px 6px", borderRadius: 8, background: `${ac(s.a)}18` }}>NOW</span>}
-            </div>
-          );
-        })}
+        {agent.segs.map((s,i)=>{ const cur=s.sh<=NOW_H&&s.eh>NOW_H; return (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 8px", borderRadius:8, background:cur?`${ac(s.a)}15`:"transparent", marginBottom:3 }}>
+            <div style={{ width:7, height:7, borderRadius:"50%", background:ac(s.a), flexShrink:0, boxShadow:cur?`0 0 8px ${ac(s.a)}`:"none" }} />
+            <span style={{ fontSize:12, fontWeight:cur?600:400, color:cur?C.tx0:C.tx1, flex:1 }}>{s.a}</span>
+            <span style={{ fontSize:11, color:C.tx2, fontFamily:"monospace" }}>{fmtH(s.sh)}–{fmtH(s.eh)}</span>
+            {cur && <span style={{ fontSize:10, fontWeight:700, color:ac(s.a), padding:"1px 6px", borderRadius:8, background:`${ac(s.a)}18` }}>NOW</span>}
+          </div>
+        );})}
       </div>}
 
       {!hasSched && (
-        <div style={{ background: C.card, border: ".5px solid " + C.bd, borderRadius: 14, padding: 20, marginBottom: 12, textAlign: "center", animation: "fade-up .5s ease .3s both" }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.tx0, marginBottom: 6 }}>Schedule not yet loaded</div>
-          <div style={{ fontSize: 13, color: C.tx2, marginBottom: 8 }}>Your schedule will appear here once connected via Workday or uploaded by WFM.</div>
-          <div style={{ fontSize: 12, color: C.kale }}>Pillar: {user.pillar} · Contact your WFM team for schedule access</div>
+        <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:20, marginBottom:12, textAlign:"center", animation:"fade-up .5s ease .3s both" }}>
+          <div style={{ fontSize:14, fontWeight:600, color:C.tx0, marginBottom:6 }}>Schedule not yet loaded</div>
+          <div style={{ fontSize:13, color:C.tx2, marginBottom:8 }}>Your schedule will appear here once connected via Workday or uploaded by WFM.</div>
+          <div style={{ fontSize:12, color:C.kale }}>Pillar: {user.pillar} · Contact your WFM team for schedule access</div>
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, animation: "fade-up .5s ease .4s both" }}>
-        <div style={{ background: C.card, border: `.5px solid ${C.bd}`, borderRadius: 14, padding: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-            <div>
-              <div style={{ fontSize: 11, color: C.tx2, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 2 }}>Level {user.level}</div>
-              <div style={{ fontSize: 30, fontWeight: 800, color: C.purple, lineHeight: 1 }}>{user.level}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: C.tx0 }}>{user.xp.toLocaleString()} XP</div>
-              <div style={{ fontSize: 11, color: C.amber, marginTop: 2 }}>🔥 {user.streak}d streak</div>
-              {user.streak >= 7 && <div style={{ fontSize: 10, color: "#0AC8A0", marginTop: 2, fontWeight: 600 }}>2× XP MULTIPLIER</div>}
-            </div>
-          </div>
-          {/* Recent badge earned */}
-          <div style={{ padding: "8px 10px", borderRadius: 8, background: "rgba(127,119,221,.08)", border: ".5px solid rgba(127,119,221,.25)", marginBottom: 8, display: "flex", alignItems: "center", gap: 8, animation: "fade-up .5s ease .6s both" }}>
-            <span style={{ fontSize: 17 }}>🎯</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: C.tx0 }}>Badge earned: Top 10% — Silver</div>
-              <div style={{ fontSize: 11, color: C.purple }}>+150 XP · Earned 2 days ago</div>
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#C0C0C0", background: "rgba(192,192,192,.15)", padding: "2px 7px", borderRadius: 6 }}>Silver</div>
-          </div>
-          <XPBar value={user.xp % 1000} max={1000} color={C.purple} />
-          <div style={{ fontSize: 11, color: C.tx2, marginTop: 6 }}>Schedule Sensei · {1000 - (user.xp % 1000)} XP to next level</div>
+      {/* ─── 3. IN-CALL QUICK REFERENCE ─── */}
+      <div style={{ marginBottom:12, animation:"fade-up .5s ease .32s both" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+          <div style={{ fontSize:14, fontWeight:600, color:C.tx0 }}>In-call reference</div>
+          <span style={{ fontSize:10, color:C.tx2, background:"rgba(255,255,255,.05)", padding:"2px 7px", borderRadius:6, border:`.5px solid ${C.bd}` }}>tap to expand</span>
         </div>
-        <div style={{ background: C.card, border: `.5px solid ${C.bd}`, borderRadius: 14, padding: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: C.tx0, marginBottom: 10 }}>Team leaderboard</div>
-          {board.map((r, i) => (
-            <div key={r.n} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 7px", borderRadius: 8, background: r.me ? "rgba(10,144,144,.1)" : "transparent", marginBottom: 4, animation: `fade-up .3s ease ${.05 * i + .3}s both` }}>
-              <span style={{ fontSize: 12, color: r.r <= 2 ? C.amber : C.tx2, minWidth: 14, fontWeight: 500 }}>#{r.r}</span>
-              <span style={{ flex: 1, fontSize: 12, fontWeight: r.me ? 600 : 400, color: C.tx0 }}>{r.n}</span>
-              <span style={{ fontSize: 12, color: C.tx1 }}>{r.xp.toLocaleString()}</span>
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+          {quickRef.map(sec=>(
+            <div key={sec.id} style={{ background:C.card, border:`.5px solid ${refSection===sec.id?C.kale+"44":C.bd}`, borderRadius:12, overflow:"hidden", transition:"border-color .2s" }}>
+              <button onClick={()=>setRefSection(refSection===sec.id?null:sec.id)}
+                style={{ width:"100%", display:"flex", alignItems:"center", gap:10, padding:"11px 14px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
+                <span style={{ fontSize:15 }}>{sec.icon}</span>
+                <span style={{ flex:1, fontSize:13, fontWeight:600, color:C.tx0 }}>{sec.label}</span>
+                <span style={{ fontSize:12, color:C.tx2, display:"inline-block", transform:refSection===sec.id?"rotate(180deg)":"none", transition:"transform .2s" }}>▾</span>
+              </button>
+              {refSection===sec.id && (
+                <div style={{ padding:"0 14px 12px 14px", animation:"fade-up .18s ease both" }}>
+                  {sec.items.map((item,i)=>(
+                    <div key={i} style={{ display:"flex", gap:12, padding:"7px 0", borderTop:`.5px solid ${C.bd}` }}>
+                      <div style={{ minWidth:110, fontSize:12, fontWeight:600, color:C.kale, flexShrink:0 }}>{item.t}</div>
+                      <div style={{ fontSize:12, color:C.tx1, lineHeight:1.5 }}>{item.d}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── XP + LEADERBOARD ─── */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, animation:"fade-up .5s ease .4s both" }}>
+        <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:14 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+            <div>
+              <div style={{ fontSize:11, color:C.tx2, textTransform:"uppercase", letterSpacing:".06em", marginBottom:2 }}>Level {user.level}</div>
+              <div style={{ fontSize:30, fontWeight:800, color:C.purple, lineHeight:1 }}>{user.level}</div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:14, fontWeight:500, color:C.tx0 }}>{user.xp.toLocaleString()} XP</div>
+              <div style={{ fontSize:11, color:C.amber, marginTop:2 }}>🔥 {user.streak}d streak</div>
+              {user.streak>=7 && <div style={{ fontSize:10, color:"#0AC8A0", marginTop:2, fontWeight:600 }}>2× XP MULTIPLIER</div>}
+            </div>
+          </div>
+          <div style={{ padding:"8px 10px", borderRadius:8, background:"rgba(127,119,221,.08)", border:".5px solid rgba(127,119,221,.25)", marginBottom:8, display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:17 }}>🎯</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:C.tx0 }}>Badge earned: Top 10% — Silver</div>
+              <div style={{ fontSize:11, color:C.purple }}>+150 XP · Earned 2 days ago</div>
+            </div>
+            <div style={{ fontSize:11, fontWeight:600, color:"#C0C0C0", background:"rgba(192,192,192,.15)", padding:"2px 7px", borderRadius:6 }}>Silver</div>
+          </div>
+          <XPBar value={user.xp%1000} max={1000} color={C.purple} />
+          <div style={{ fontSize:11, color:C.tx2, marginTop:6 }}>Schedule Sensei · {1000-(user.xp%1000)} XP to next level</div>
+        </div>
+        <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:14 }}>
+          <div style={{ fontSize:14, fontWeight:600, color:C.tx0, marginBottom:10 }}>Team leaderboard</div>
+          {board.map((r,i)=>(
+            <div key={r.n} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 7px", borderRadius:8, background:r.me?"rgba(10,144,144,.1)":"transparent", marginBottom:4, animation:`fade-up .3s ease ${.05*i+.3}s both` }}>
+              <span style={{ fontSize:12, color:r.r<=2?C.amber:C.tx2, minWidth:14, fontWeight:500 }}>#{r.r}</span>
+              <span style={{ flex:1, fontSize:12, fontWeight:r.me?600:400, color:C.tx0 }}>{r.n}</span>
+              <span style={{ fontSize:12, color:C.tx1 }}>{r.xp.toLocaleString()}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* ═══ PRISM SCORE ═══ */}
-      <div style={{ marginTop: 12, marginBottom: 12, animation: "fade-up .5s ease .45s both" }}>
+      <div style={{ marginTop:12, marginBottom:12, animation:"fade-up .5s ease .45s both" }}>
         <PrismScore score={Math.min(99,Math.round((user.adherence*0.5)+(Math.min(user.streak,30)/30*20)+(user.xp/2000*30)))}
           label="Your personal Gustie score"
           breakdown={[{label:"Adherence",value:user.adherence||94},{label:"Streak",value:Math.min(99,Math.round(user.streak/30*100))},{label:"XP progress",value:Math.min(99,Math.round(user.xp/2000*100))}]}
@@ -4384,57 +4497,196 @@ function AgentDashboard({ user, onNav, onPri }) {
       </div>
 
       {/* ═══ PERFORMANCE STATS ═══ */}
-      <div style={{ marginTop: 12, animation: "fade-up .5s ease .5s both" }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: C.tx0, marginBottom: 10 }}>My performance</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+      <div style={{ marginTop:12, animation:"fade-up .5s ease .5s both" }}>
+        <div style={{ fontSize:14, fontWeight:600, color:C.tx0, marginBottom:10 }}>My performance</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8 }}>
           {[
-            { period: "Today", vol: 47, aht: "8:12", adh: "97%", sl: "84%", color: C.kale },
-            { period: "This week", vol: 198, aht: "8:05", adh: "96%", sl: "82%", color: C.purple },
-            { period: "This month", vol: 842, aht: "7:58", adh: "95%", sl: "81%", color: C.amber },
-            { period: "YTD", vol: "4.2K", aht: "8:18", adh: "94%", sl: "80%", color: C.guava },
-          ].map(s => (
-            <div key={s.period} style={{ background: C.card, border: `.5px solid ${C.bd}`, borderRadius: 12, padding: 12, borderTop: `2px solid ${s.color}` }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: s.color, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".06em" }}>{s.period}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                <div><div style={{ fontSize: 11, color: C.tx2 }}>Contacts</div><div style={{ fontSize: 17, fontWeight: 700, color: C.tx0 }}>{s.vol}</div></div>
-                <div><div style={{ fontSize: 11, color: C.tx2 }}>Avg AHT</div><div style={{ fontSize: 17, fontWeight: 700, color: C.tx0 }}>{s.aht}</div></div>
-                <div><div style={{ fontSize: 11, color: C.tx2 }}>Adherence</div><div style={{ fontSize: 17, fontWeight: 700, color: parseFloat(s.adh) >= 95 ? "#0AC8A0" : C.amber }}>{s.adh}</div></div>
-                <div><div style={{ fontSize: 11, color: C.tx2 }}>SL Contrib</div><div style={{ fontSize: 17, fontWeight: 700, color: parseFloat(s.sl) >= 80 ? "#0AC8A0" : C.amber }}>{s.sl}</div></div>
+            { period:"Today",      vol:47,    aht:"8:12", adh:"97%", sl:"84%", color:C.kale   },
+            { period:"This week",  vol:198,   aht:"8:05", adh:"96%", sl:"82%", color:C.purple  },
+            { period:"This month", vol:842,   aht:"7:58", adh:"95%", sl:"81%", color:C.amber   },
+            { period:"YTD",        vol:"4.2K",aht:"8:18", adh:"94%", sl:"80%", color:C.guava   },
+          ].map(s=>(
+            <div key={s.period} style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:12, padding:12, borderTop:`2px solid ${s.color}` }}>
+              <div style={{ fontSize:12, fontWeight:600, color:s.color, marginBottom:8, textTransform:"uppercase", letterSpacing:".06em" }}>{s.period}</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
+                <div><div style={{ fontSize:11, color:C.tx2 }}>Contacts</div><div style={{ fontSize:17, fontWeight:700, color:C.tx0 }}>{s.vol}</div></div>
+                <div><div style={{ fontSize:11, color:C.tx2 }}>Avg AHT</div><div style={{ fontSize:17, fontWeight:700, color:C.tx0 }}>{s.aht}</div></div>
+                <div><div style={{ fontSize:11, color:C.tx2 }}>Adherence</div><div style={{ fontSize:17, fontWeight:700, color:parseFloat(s.adh)>=95?"#0AC8A0":C.amber }}>{s.adh}</div></div>
+                <div><div style={{ fontSize:11, color:C.tx2 }}>SL Contrib</div><div style={{ fontSize:17, fontWeight:700, color:parseFloat(s.sl)>=80?"#0AC8A0":C.amber }}>{s.sl}</div></div>
               </div>
             </div>
           ))}
         </div>
       </div>
 
+      {/* ═══ 4. GOAL TRACKING ═══ */}
+      <div style={{ marginTop:12, animation:"fade-up .5s ease .52s both" }}>
+        <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:16 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600, color:C.tx0 }}>Your Gustie journey</div>
+              <div style={{ fontSize:12, color:C.tx2, marginTop:2 }}>Current: <span style={{ color:"#C0C0C0", fontWeight:600 }}>Silver Gustie</span></div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:10, color:C.tx2, marginBottom:2, textTransform:"uppercase", letterSpacing:".06em" }}>On track for</div>
+              <div style={{ fontSize:16, fontWeight:800, background:"linear-gradient(135deg,#FFD700,#FFA500)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Gold Gustie</div>
+              <div style={{ fontSize:11, color:C.amber, marginTop:1 }}>{goldLabel}</div>
+            </div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10 }}>
+            {[["Bronze","#CD7F32",user.xp>=1000],["Silver","#C0C0C0",user.xp>=2500],["Gold","#FFD700",user.xp>=5000],["Platinum","#E5E4E2",user.xp>=10000]].map(([tier,col,done],i)=>(
+              <React.Fragment key={tier}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+                  <div style={{ width:28, height:28, borderRadius:"50%", background:done?`${col}30`:"rgba(255,255,255,.04)", border:`.5px solid ${done?col:C.bd}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color:done?col:C.tx2 }}>
+                    {done?"★":"○"}
+                  </div>
+                  <div style={{ fontSize:10, color:done?col:C.tx2, fontWeight:done?600:400 }}>{tier}</div>
+                </div>
+                {i<3 && <div style={{ flex:1, height:2, background:done&&i<2?col:"rgba(255,255,255,.07)", borderRadius:1 }} />}
+              </React.Fragment>
+            ))}
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:C.tx2, marginBottom:5 }}>
+            <span>{user.xp.toLocaleString()} XP</span>
+            <span>Goal: {xpToGold.toLocaleString()} XP</span>
+          </div>
+          <div style={{ height:6, background:"rgba(255,255,255,.06)", borderRadius:3, overflow:"hidden", marginBottom:8 }}>
+            <div style={{ height:"100%", width:`${goldPct}%`, background:"linear-gradient(90deg,#C0C0C0,#FFD700)", borderRadius:3 }} />
+          </div>
+          <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+            <span style={{ fontSize:11, color:"#0AC8A0", fontWeight:600 }}>✓ On track · +420 XP/month avg</span>
+            <span style={{ fontSize:11, color:C.tx2 }}>{(xpToGold-user.xp).toLocaleString()} XP remaining</span>
+          </div>
+        </div>
+      </div>
+
       {/* ═══ VTO OFFER ═══ */}
       <VTOWidget user={user} />
 
-      {/* ═══ DAILY CHALLENGES ═══ */}
-      <div style={{ marginTop: 12, animation: "fade-up .5s ease .6s both" }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: C.tx0, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
-          Daily challenges
-          <span style={{ fontSize: 11, fontWeight: 600, color: C.amber, background: "rgba(239,159,39,.12)", padding: "2px 8px", borderRadius: 8, border: ".5px solid rgba(239,159,39,.3)" }}>2/3 complete</span>
+      {/* ═══ 5. PEER KUDOS ═══ */}
+      <div style={{ marginTop:12, animation:"fade-up .5s ease .56s both" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+          <div style={{ fontSize:14, fontWeight:600, color:C.tx0 }}>Kudos</div>
+          <button onClick={()=>{ setKudosPanelOpen(!kudosPanelOpen); setKudosSent(false); setKudosMsg(""); }}
+            style={{ fontSize:12, fontWeight:600, color:C.purple, background:`${C.purple}12`, border:`.5px solid ${C.purple}30`, borderRadius:8, padding:"5px 12px", cursor:"pointer", transition:"all .14s" }}
+            onMouseEnter={e=>{ e.currentTarget.style.background=`${C.purple}22`; }}
+            onMouseLeave={e=>{ e.currentTarget.style.background=`${C.purple}12`; }}>
+            ✨ Send kudos
+          </button>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 8 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:7, marginBottom:kudosPanelOpen?10:0 }}>
+          {receivedKudos.map((k,i)=>{ const col=C[k.ck]||C.kale; return (
+            <div key={i} style={{ background:C.card, border:`.5px solid ${col}22`, borderRadius:11, padding:"11px 14px", display:"flex", alignItems:"flex-start", gap:12, animation:`fade-up .3s ease ${i*.06}s both` }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:`${col}18`, border:`.5px solid ${col}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{k.type}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:C.tx0, marginBottom:2 }}>{k.msg}</div>
+                <div style={{ fontSize:11, color:C.tx2 }}>from <span style={{ color:col, fontWeight:600 }}>{k.from}</span> · {k.time}</div>
+              </div>
+            </div>
+          );})}
+        </div>
+        {kudosPanelOpen && (
+          <div style={{ background:C.card, border:`.5px solid ${C.purple}30`, borderRadius:12, padding:16, animation:"fade-up .2s ease both" }}>
+            {kudosSent ? (
+              <div style={{ textAlign:"center", padding:"10px 0" }}>
+                <div style={{ fontSize:30, marginBottom:8 }}>✨</div>
+                <div style={{ fontSize:14, fontWeight:700, color:C.tx0, marginBottom:4 }}>Kudos sent to {kudosTo}!</div>
+                <div style={{ fontSize:12, color:C.tx2, marginBottom:12 }}>You're making the team culture better, one kudos at a time.</div>
+                <button onClick={()=>{ setKudosPanelOpen(false); setKudosSent(false); setKudosMsg(""); }}
+                  style={{ background:C.purple, color:"#fff", border:"none", borderRadius:9, padding:"8px 20px", fontSize:13, fontWeight:600, cursor:"pointer" }}>Done</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize:13, fontWeight:600, color:C.tx0, marginBottom:10 }}>Send kudos to a teammate</div>
+                <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                  <select value={kudosTo} onChange={e=>setKudosTo(e.target.value)}
+                    style={{ flex:1, background:"rgba(255,255,255,.05)", border:`.5px solid ${C.bd}`, borderRadius:8, padding:"8px 10px", color:C.tx0, fontSize:12, outline:"none" }}>
+                    {["LaKeisha H.","Ashley Dickey","Anthony Piper","Nia W.","Briana Perez","Marcus Webb"].map(n=>(
+                      <option key={n} value={n} style={{ background:"#1a2035" }}>{n}</option>
+                    ))}
+                  </select>
+                  <div style={{ display:"flex", gap:5 }}>
+                    {[["🎯","Nailed it"],["💜","Support"],["⚡","Speed"],["🤝","Teamwork"]].map(([em,lb])=>(
+                      <button key={em} onClick={()=>setKudosMsg(lb)} title={lb}
+                        style={{ width:34, height:34, borderRadius:8, background:kudosMsg===lb?`${C.purple}22`:"rgba(255,255,255,.05)", border:`.5px solid ${kudosMsg===lb?C.purple+"44":C.bd}`, cursor:"pointer", fontSize:15, display:"flex", alignItems:"center", justifyContent:"center", transition:"all .14s" }}>{em}</button>
+                    ))}
+                  </div>
+                </div>
+                <textarea value={kudosMsg} onChange={e=>setKudosMsg(e.target.value)}
+                  placeholder="What did they do great? Be specific — it means more!" rows={2}
+                  style={{ width:"100%", background:"rgba(255,255,255,.04)", border:`.5px solid ${C.bd}`, borderRadius:8, padding:"9px 11px", fontSize:12, color:C.tx0, resize:"none", outline:"none", boxSizing:"border-box", lineHeight:1.5 }} />
+                <div style={{ display:"flex", gap:7, marginTop:9 }}>
+                  <button onClick={()=>setKudosPanelOpen(false)} style={{ flex:1, padding:"9px 0", borderRadius:9, background:"rgba(255,255,255,.05)", color:C.tx2, border:`.5px solid ${C.bd}`, fontSize:13, cursor:"pointer" }}>Cancel</button>
+                  <button onClick={()=>{ if(kudosMsg.trim()){ setKudosSent(true); playSound("approve"); window.prismToast?.(`Kudos sent to ${kudosTo}! 🌟`,"success"); }}}
+                    style={{ flex:2, padding:"9px 0", borderRadius:9, background:`linear-gradient(135deg,${C.purple},${C.purple}BB)`, color:"#fff", border:"none", fontSize:13, fontWeight:700, cursor:"pointer", boxShadow:`0 4px 16px ${C.purple}28`, opacity:kudosMsg.trim()?1:.5, transition:"opacity .15s" }}>
+                    Send kudos ✨
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ 6. TEAM PRESENCE ═══ */}
+      <div style={{ marginTop:12, marginBottom:12, animation:"fade-up .5s ease .58s both" }}>
+        <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:14 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:C.tx0 }}>Who's on today</div>
+            {floorSup && <div style={{ fontSize:12, color:C.tx2 }}>Floor lead: <span style={{ color:C.kale, fontWeight:600 }}>{floorSup.n}</span></div>}
+          </div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+            {teamPresence.map((m,i)=>{
+              const presColor = m.sup?C.kale:m.captain?C.amber:C.tx2;
+              const dotColor  = m.seg==="Break"?C.amber:"#0AC8A0";
+              return (
+                <div key={m.n} title={`${m.n} · ${m.status==="on"?m.seg:"Off shift"}`}
+                  style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, padding:"9px 10px", borderRadius:11, background:m.status==="on"?`${presColor}08`:"transparent", border:`.5px solid ${m.status==="on"?presColor+"30":C.bd+"44"}`, minWidth:62, opacity:m.status==="on"?1:.38, position:"relative" }}>
+                  <div style={{ width:34, height:34, borderRadius:"50%", background:`${presColor}18`, border:`.5px solid ${presColor}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:presColor }}>
+                    {m.n.split(" ").map(w=>w[0]).join("").slice(0,2)}
+                  </div>
+                  <div style={{ fontSize:10, color:m.status==="on"?C.tx1:C.tx2, textAlign:"center", lineHeight:1.3, fontWeight:m.sup||m.captain?600:400 }}>{m.n.split(" ")[0]}</div>
+                  {m.sup  && <div style={{ fontSize:9, color:C.kale,  fontWeight:700, letterSpacing:".04em" }}>SUP</div>}
+                  {m.captain&&!m.sup && <div style={{ fontSize:9, color:C.amber, fontWeight:700, letterSpacing:".04em" }}>CAP</div>}
+                  {m.status==="on" && <div style={{ position:"absolute", top:7, right:7, width:7, height:7, borderRadius:"50%", background:dotColor, boxShadow:`0 0 5px ${dotColor}` }} />}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display:"flex", gap:16, marginTop:10, flexWrap:"wrap" }}>
+            <span style={{ fontSize:11, color:C.tx2, display:"flex", alignItems:"center", gap:4 }}><span style={{ width:7,height:7,borderRadius:"50%",background:"#0AC8A0",display:"inline-block" }} />Active ({onTeamCount-breakCount})</span>
+            <span style={{ fontSize:11, color:C.tx2, display:"flex", alignItems:"center", gap:4 }}><span style={{ width:7,height:7,borderRadius:"50%",background:C.amber,display:"inline-block" }} />On break ({breakCount})</span>
+            <span style={{ fontSize:11, color:C.tx2, display:"flex", alignItems:"center", gap:4, opacity:.5 }}><span style={{ width:7,height:7,borderRadius:"50%",background:"rgba(255,255,255,.18)",display:"inline-block" }} />Off today ({offCount})</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ DAILY CHALLENGES ═══ */}
+      <div style={{ marginTop:4, animation:"fade-up .5s ease .6s both" }}>
+        <div style={{ fontSize:14, fontWeight:600, color:C.tx0, marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
+          Daily challenges
+          <span style={{ fontSize:11, fontWeight:600, color:C.amber, background:"rgba(239,159,39,.12)", padding:"2px 8px", borderRadius:8, border:".5px solid rgba(239,159,39,.3)" }}>2/3 complete</span>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:8 }}>
           {[
-            { name: "Speed Demon", desc: "Handle 5 calls under 7 min AHT", progress: 5, goal: 5, xp: 25, done: true, icon: "⚡" },
-            { name: "Inbox Zero", desc: "Clear 10 email contacts", progress: 8, goal: 10, xp: 20, done: false, icon: "📧" },
-            { name: "Streak Builder", desc: "Stay adherent all day", progress: 1, goal: 1, xp: 30, done: true, icon: "🔥" },
-          ].map(ch => (
-            <div key={ch.name} style={{ background: ch.done ? `rgba(10,200,150,.06)` : C.card, border: `.5px solid ${ch.done ? "rgba(10,200,150,.25)" : C.bd}`, borderRadius: 10, padding: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 17 }}>{ch.icon}</span>
+            { name:"Speed Demon",    desc:"Handle 5 calls under 7 min AHT", progress:5, goal:5, xp:25, done:true,  icon:"⚡" },
+            { name:"Inbox Zero",     desc:"Clear 10 email contacts",          progress:8, goal:10,xp:20, done:false, icon:"📧" },
+            { name:"Streak Builder", desc:"Stay adherent all day",            progress:1, goal:1, xp:30, done:true,  icon:"🔥" },
+          ].map(ch=>(
+            <div key={ch.name} style={{ background:ch.done?"rgba(10,200,150,.06)":C.card, border:`.5px solid ${ch.done?"rgba(10,200,150,.25)":C.bd}`, borderRadius:10, padding:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                <span style={{ fontSize:17 }}>{ch.icon}</span>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.tx0 }}>{ch.name}</div>
-                  <div style={{ fontSize: 11, color: C.tx2 }}>{ch.desc}</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.tx0 }}>{ch.name}</div>
+                  <div style={{ fontSize:11, color:C.tx2 }}>{ch.desc}</div>
                 </div>
               </div>
-              <div style={{ height: 4, background: "rgba(255,255,255,.06)", borderRadius: 2, overflow: "hidden", marginBottom: 6 }}>
-                <div style={{ height: "100%", width: `${ch.progress / ch.goal * 100}%`, background: ch.done ? "#0AC8A0" : C.amber, borderRadius: 2 }} />
+              <div style={{ height:4, background:"rgba(255,255,255,.06)", borderRadius:2, overflow:"hidden", marginBottom:6 }}>
+                <div style={{ height:"100%", width:`${ch.progress/ch.goal*100}%`, background:ch.done?"#0AC8A0":C.amber, borderRadius:2 }} />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 11, color: ch.done ? "#0AC8A0" : C.tx2, fontWeight: ch.done ? 600 : 400 }}>{ch.done ? "Complete!" : `${ch.progress}/${ch.goal}`}</span>
-                <span style={{ fontSize: 11, color: C.purple, fontWeight: 600 }}>+{ch.xp} XP</span>
+              <div style={{ display:"flex", justifyContent:"space-between" }}>
+                <span style={{ fontSize:11, color:ch.done?"#0AC8A0":C.tx2, fontWeight:ch.done?600:400 }}>{ch.done?"Complete!":`${ch.progress}/${ch.goal}`}</span>
+                <span style={{ fontSize:11, color:C.purple, fontWeight:600 }}>+{ch.xp} XP</span>
               </div>
             </div>
           ))}
