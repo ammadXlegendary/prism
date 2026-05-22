@@ -39,6 +39,35 @@ const THEMES = {
 };
 let C = THEMES.dark;
 
+// ─── HOLIDAY SYSTEM ────────────────────────────────────────────
+const HOLIDAY_PALETTES = {
+  "New Year's":      { bg:"#080B18", guava:"#FFD700", kale:"#00E5FF", amber:"#FF69B4", emoji:"🎆", msg:"Happy New Year!" },
+  "Valentine's Day": { bg:"#180810", guava:"#FF4F81", kale:"#FF8FAB", amber:"#FF4F81", emoji:"💝", msg:"Happy Valentine's Day!" },
+  "St. Patrick's":   { bg:"#061408", guava:"#2DB54A", kale:"#70C040", amber:"#FFD700", emoji:"🍀", msg:"Happy St. Patrick's Day!" },
+  "Memorial Day":    { bg:"#060816", guava:"#B22234", kale:"#3C3B6E", amber:"#C8C8D0", emoji:"🇺🇸", msg:"Happy Memorial Day!" },
+  "Juneteenth":      { bg:"#060F0A", guava:"#EF3340", kale:"#00853E", amber:"#EF3340", emoji:"✊", msg:"Happy Juneteenth!" },
+  "4th of July":     { bg:"#060816", guava:"#C01020", kale:"#3C3B6E", amber:"#C8C8D0", emoji:"🎇", msg:"Happy 4th of July!" },
+  "Labor Day":       { bg:"#08060F", guava:"#5060D0", kale:"#4A78C0", amber:"#C0C0D0", emoji:"💪", msg:"Happy Labor Day!" },
+  "Halloween":       { bg:"#0C0608", guava:"#FF7518", kale:"#9932CC", amber:"#FF7518", emoji:"🎃", msg:"Happy Halloween!" },
+  "Thanksgiving":    { bg:"#100800", guava:"#D2691E", kale:"#CC8B00", amber:"#E8A020", emoji:"🦃", msg:"Happy Thanksgiving!" },
+  "Christmas":       { bg:"#06100A", guava:"#CC0000", kale:"#006400", amber:"#FFD700", emoji:"🎄", msg:"Merry Christmas!" },
+  "New Year's Eve":  { bg:"#080810", guava:"#FFD700", kale:"#B0B0C0", amber:"#FF69B4", emoji:"🥂", msg:"Happy New Year's Eve!" },
+};
+const HOLIDAY_WINDOWS = [
+  [1,1,"New Year's",0,2],[2,14,"Valentine's Day",3,1],[3,17,"St. Patrick's",3,1],
+  [5,27,"Memorial Day",3,1],[6,19,"Juneteenth",3,1],[7,4,"4th of July",3,2],
+  [9,2,"Labor Day",3,1],[10,31,"Halloween",7,1],[11,26,"Thanksgiving",3,2],
+  [12,25,"Christmas",7,2],[12,31,"New Year's Eve",3,0],
+];
+function getActiveHoliday() {
+  const now = new Date(), yr = now.getFullYear();
+  for (const [mo,day,name,before,after] of HOLIDAY_WINDOWS) {
+    const diff = Math.round((new Date(yr,mo-1,day) - now) / 86400000);
+    if (diff >= -after && diff <= before) return { name, ...HOLIDAY_PALETTES[name] };
+  }
+  return null;
+}
+
 const ACT_COLORS = {
   // ── Phone family (teals) ─────────────────────────────────────
   "Phone":"#0A9090","Phone AHOD":"#CC2222","Phone Shadowing":"#0A8080",
@@ -1114,12 +1143,67 @@ const USERS = {
   manager:[{id:"CB",name:"Cyndy Boerger",    title:"Payroll & Taxes PE",  pillar:"Payroll & Taxes",avatar:"CB"},
            {id:"JK",name:"Jenny Kirou",       title:"Benefits Care PE",    pillar:"Benefits Care",  avatar:"JK"},
            {id:"AB",name:"Ashley Broadwell",  title:"SMB Sales PE",        pillar:"SMB - Sales",    avatar:"AB"}],
-  wfm:    [{id:"AW",name:"Ammad Williams",  title:"WFM Analyst",       pillar:"All",avatar:"AW"},
-           {id:"TZ",name:"Tammie Zapata",   title:"Intraday Analyst",  pillar:"All",avatar:"TZ"},
-           {id:"DS",name:"Dwight Simpson",  title:"Workforce Lead",    pillar:"All",avatar:"DS"},
-           {id:"DP",name:"David Percival",  title:"WFM Analyst",       pillar:"All",avatar:"DP"},
-           {id:"BB",name:"Bunny Bates",     title:"Data Science",      pillar:"All",avatar:"BB"}],
+  wfm:    [{id:"AW",name:"Ammad Williams", title:"WFM Analyst",      pillar:"All",avatar:"AW",subRole:"analyst",   level:"L5"},
+           {id:"TZ",name:"Tammie Zapata",  title:"Intraday Analyst", pillar:"All",avatar:"TZ",subRole:"intraday",  level:"L4"},
+           {id:"DS",name:"Dwight Simpson", title:"Workforce Lead",   pillar:"All",avatar:"DS",subRole:"lead",      level:"L6"},
+           {id:"DP",name:"David Percival", title:"WFM Analyst",      pillar:"All",avatar:"DP",subRole:"forecast",  level:"L4"},
+           {id:"BB",name:"Bunny Bates",    title:"Data Science",     pillar:"All",avatar:"BB",subRole:"analyst",   level:"L4"}],
 };
+
+// ─── ROLES CONFIG ──────────────────────────────────────────────
+const ROLES_CONFIG = {
+  agent: {
+    subRoles: {
+      general:  { label:"General Agent",  desc:"Core support queue handling" },
+      senior:   { label:"Senior Agent",   desc:"Cross-trained, mentors L1-L2" },
+      captain:  { label:"Team Captain",   desc:"Escalation lead, floor support" },
+    },
+    levels: ["L1","L2","L3","Senior"],
+    permissions: {
+      "view.dashboard":true, "view.schedule":true, "view.timeoff":true,
+      "view.achievements":true, "view.profile":true,
+      "edit.schedule":false, "view.queue":false, "view.forecast":false,
+      "edit.roster":false, "view.approvals":false, "admin.roles":false,
+      "view.rtm":false, "view.connections":false,
+    },
+  },
+  manager: {
+    subRoles: {
+      team_lead:  { label:"Team Lead",       desc:"Frontline people management" },
+      pe:         { label:"Program Expert",  desc:"SME, escalations & coaching" },
+      sr_manager: { label:"Senior Manager",  desc:"Multi-pillar, strategy & ops" },
+    },
+    levels: ["L4","L5","L6"],
+    permissions: {
+      "view.dashboard":true, "view.schedule":true, "view.timeoff":true,
+      "view.achievements":true, "view.profile":true,
+      "edit.schedule":true, "view.queue":true, "view.forecast":false,
+      "edit.roster":false, "view.approvals":true, "admin.roles":false,
+      "view.rtm":true, "view.connections":false,
+    },
+  },
+  wfm: {
+    subRoles: {
+      analyst:    { label:"WFM Analyst",       desc:"Forecasting, scheduling, full platform" },
+      intraday:   { label:"Intraday Analyst",  desc:"RTM focus — live ops & interventions", focusView:"ops" },
+      forecast:   { label:"Forecast Analyst",  desc:"ClearCast & model lab focus", focusView:"forecast" },
+      scheduling: { label:"Scheduling Lead",   desc:"Schedule build & publish workflow", focusView:"calendar" },
+      lead:       { label:"Workforce Lead",    desc:"Platform admin, capacity, strategy" },
+    },
+    levels: ["L3","L4","L5","L6"],
+    permissions: {
+      "view.dashboard":true, "view.schedule":true, "view.timeoff":true,
+      "view.achievements":true, "view.profile":true,
+      "edit.schedule":true, "view.queue":true, "view.forecast":true,
+      "edit.roster":true, "view.approvals":true, "admin.roles":true,
+      "view.rtm":true, "view.connections":true,
+    },
+  },
+};
+function hasPermission(user, feature) {
+  return ROLES_CONFIG[user?.role]?.permissions[feature] ?? false;
+}
+
 const NAVS = {
   agent:   [
     {id:"dashboard",  icon:"⊞", label:"My day"},
@@ -1156,6 +1240,7 @@ const NAVS = {
     {id:"approvals",  icon:"✓", label:"Approvals",  alert:true},
     {id:"achievements",icon:"◆",label:"Achievements"},
     {id:"connections", icon:"⬡", label:"Connections"},
+    {id:"roles",      icon:"⊗", label:"Roles & Perms"},
   ],
 };
 
@@ -2486,6 +2571,78 @@ const RTM_QUEUES_INIT = [
   { id:"onboarding",label:"Onboarding", waiting:0,  lw:0,   sl:97, aht:521, handling:2, target:85 },
 ];
 
+function OTVTOModal({ onClose }) {
+  const [type, setType] = useState("OT");
+  const [scope, setScope] = useState("pillar");
+  const [pillar, setPillar] = useState("BenOps");
+  const [maxHrs, setMaxHrs] = useState("2");
+  const [responses, setResponses] = useState([
+    {n:"LaKeisha H.",   status:"pending"},
+    {n:"Jordan (RTM)",  status:"pending"},
+    {n:"Marcus V.",     status:"accepted"},
+    {n:"Priya S.",      status:"declined"},
+  ]);
+  const pillars = ["BenOps","Payroll & Taxes","Premier DSA","Partner Care","SMB Sales","Benefits Care"];
+  function sendOffer() {
+    setResponses(prev => prev.map(r => r.status==="pending" ? {...r, status: Math.random()>.4?"accepted":"pending"} : r));
+    window.prismToast?.(`${type} offer sent to ${scope==="all"?"all eligible agents":pillar+" agents"}`, "success");
+  }
+  const accepted = responses.filter(r=>r.status==="accepted").length;
+  const pending  = responses.filter(r=>r.status==="pending").length;
+  const declined = responses.filter(r=>r.status==="declined").length;
+  return (
+    <div style={{ background:`${C.amber}08`, border:`.5px solid ${C.amber}28`, borderRadius:11, padding:14, animation:"fade-up .2s ease" }}>
+      <div style={{ display:"flex", gap:4, marginBottom:10 }}>
+        {["OT","VTO"].map(t => (
+          <button key={t} onClick={() => setType(t)} style={{ flex:1, padding:"6px 0", borderRadius:8, border:`.5px solid ${type===t?C.amber+"50":C.bd}`, background:type===t?`${C.amber}18`:"transparent", color:type===t?C.amber:C.tx2, fontSize:12, fontWeight:600, cursor:"pointer" }}>{t}</button>
+        ))}
+      </div>
+      <div style={{ marginBottom:8 }}>
+        <div style={{ fontSize:10, color:C.tx2, marginBottom:4 }}>Scope</div>
+        <div style={{ display:"flex", gap:4 }}>
+          {[["all","All eligible"],["pillar","By pillar"]].map(([v,l]) => (
+            <button key={v} onClick={() => setScope(v)} style={{ padding:"4px 10px", borderRadius:7, border:`.5px solid ${scope===v?C.amber+"40":C.bd}`, background:scope===v?`${C.amber}12`:"transparent", color:scope===v?C.amber:C.tx2, fontSize:11, cursor:"pointer" }}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {scope==="pillar" && (
+        <div style={{ marginBottom:8 }}>
+          <div style={{ fontSize:10, color:C.tx2, marginBottom:4 }}>Pillar</div>
+          <select value={pillar} onChange={e=>setPillar(e.target.value)} style={{ width:"100%", padding:"5px 8px", borderRadius:7, border:`.5px solid ${C.bd}`, background:C.elev, color:C.tx0, fontSize:11 }}>
+            {pillars.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+      )}
+      <div style={{ marginBottom:10 }}>
+        <div style={{ fontSize:10, color:C.tx2, marginBottom:4 }}>Max hours</div>
+        <div style={{ display:"flex", gap:4 }}>
+          {["1","2","4"].map(h => (
+            <button key={h} onClick={() => setMaxHrs(h)} style={{ flex:1, padding:"4px 0", borderRadius:7, border:`.5px solid ${maxHrs===h?C.amber+"40":C.bd}`, background:maxHrs===h?`${C.amber}12`:"transparent", color:maxHrs===h?C.amber:C.tx2, fontSize:11, cursor:"pointer" }}>{h}hr</button>
+          ))}
+        </div>
+      </div>
+      <button onClick={sendOffer} style={{ width:"100%", padding:"8px 0", borderRadius:8, background:`linear-gradient(135deg,${C.amber},${C.amber}BB)`, color:"#fff", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", marginBottom:10 }}>
+        Send {type} offer →
+      </button>
+      <div style={{ fontSize:10, fontWeight:600, color:C.tx2, marginBottom:6 }}>Responses</div>
+      <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+        {[["✓","accepted","#0AC8A0",accepted],["-","pending",C.amber,pending],["✗","declined",C.guava,declined]].map(([ic,lbl,col,cnt]) => (
+          <div key={lbl} style={{ flex:1, textAlign:"center", background:`${col}10`, border:`.5px solid ${col}25`, borderRadius:8, padding:"5px 0" }}>
+            <div style={{ fontSize:13, fontWeight:700, color:col }}>{cnt}</div>
+            <div style={{ fontSize:9, color:C.tx2 }}>{lbl}</div>
+          </div>
+        ))}
+      </div>
+      {responses.map((r,i) => (
+        <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"4px 6px", borderRadius:7, marginBottom:3, background:"rgba(255,255,255,.025)" }}>
+          <span style={{ fontSize:11, color:C.tx1 }}>{r.n}</span>
+          <span style={{ fontSize:10, fontWeight:600, color:r.status==="accepted"?"#0AC8A0":r.status==="declined"?C.guava:C.amber }}>{r.status}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RealTimeMgmtView({ role }) {
   const [tick, setTick]           = useState(0);
   const [clock, setClock]         = useState("");
@@ -2583,11 +2740,15 @@ function RealTimeMgmtView({ role }) {
     return { skill, total, active, demand, gap: demand > 0 && active < 2 };
   });
 
-  function KpiCard({ label, value, sub, color, warning }) {
+  function KpiCard({ label, value, sub, color, warning, prev, prevLabel }) {
+    const delta = prev !== undefined ? (typeof value === "string" ? null : value - prev) : null;
     return (
       <div style={{ background:C.card, border:`.5px solid ${warning ? color+"44" : C.bd}`, borderTop:`2px solid ${color}`, borderRadius:12, padding:"11px 13px", animation:warning?"live-pulse 2.2s ease-in-out infinite":"none" }}>
         <div style={{ fontSize:10, color:C.tx2, textTransform:"uppercase", letterSpacing:".06em", marginBottom:3 }}>{label}</div>
-        <div key={`${value}-${tick}`} style={{ fontSize:22, fontWeight:800, color, lineHeight:1, marginBottom:2, animation:"val-pop .35s ease" }}>{value}</div>
+        <div style={{ display:"flex", alignItems:"flex-end", gap:6 }}>
+          <div key={`${value}-${tick}`} style={{ fontSize:22, fontWeight:800, color, lineHeight:1, marginBottom:2, animation:"val-pop .35s ease" }}>{value}</div>
+          {delta !== null && <div style={{ fontSize:11, fontWeight:600, color:delta>0?C.guava:"#0AC8A0", marginBottom:4 }}>{delta>0?`+${delta}`:delta} vs {prevLabel||"last wk"}</div>}
+        </div>
         <div style={{ fontSize:11, color:C.tx2 }}>{sub}</div>
       </div>
     );
@@ -2601,19 +2762,27 @@ function RealTimeMgmtView({ role }) {
       {t:"15:00",sl:76,risk:true},{t:"15:30",sl:80},{t:"16:00",sl:83},
     ];
     const sparkW = 280, sparkH = 54;
+    // Interval F vs A (30-min intervals, today)
+    const intervals = [
+      {t:"8:00",f:42,a:38},{t:"8:30",f:48,a:45},{t:"9:00",f:56,a:54},{t:"9:30",f:62,a:60},
+      {t:"10:00",f:71,a:74},{t:"10:30",f:78,a:80},{t:"11:00",f:82,a:79},{t:"11:30",f:85,a:null},
+      {t:"12:00",f:88,a:null},{t:"12:30",f:84,a:null},{t:"13:00",f:80,a:null},{t:"13:30",f:76,a:null},
+      {t:"14:00",f:74,a:null},{t:"14:30",f:70,a:null},{t:"15:00",f:66,a:null},{t:"15:30",f:60,a:null},
+    ];
+    const iMax = Math.max(...intervals.map(i => Math.max(i.f, i.a||0)));
     return (
       <div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:8 }}>
-          <KpiCard label="Contacts waiting" value={totalWaiting}        sub="all queues combined"     color={totalWaiting > 10 ? C.guava : totalWaiting > 5 ? C.amber : "#0AC8A0"} warning={totalWaiting > 5} />
+          <KpiCard label="Contacts waiting" value={totalWaiting}        sub="all queues combined"     color={totalWaiting > 10 ? C.guava : totalWaiting > 5 ? C.amber : "#0AC8A0"} warning={totalWaiting > 5}  prev={totalWaiting-3} />
           <KpiCard label="Longest wait"     value={fmtTIS(longestWait)} sub="max across queues"       color={longestWait > 180 ? C.guava : longestWait > 90 ? C.amber : "#0AC8A0"} warning={longestWait > 180} />
           <KpiCard label="Service level"    value={`${worstSL}%`}       sub="worst queue · 85% target" color={worstSL >= 85 ? "#0AC8A0" : worstSL >= 80 ? C.amber : C.guava} warning={worstSL < 85} />
-          <KpiCard label="Abandon rate"     value={`${liveAbandRate}%`} sub="target <4%"              color={liveAbandRate >= 5 ? C.guava : liveAbandRate >= 4 ? C.amber : "#0AC8A0"} warning={liveAbandRate >= 4} />
+          <KpiCard label="Abandon rate"     value={`${liveAbandRate}%`} sub="target <4%"              color={liveAbandRate >= 5 ? C.guava : liveAbandRate >= 4 ? C.amber : "#0AC8A0"} warning={liveAbandRate >= 4} prev={liveAbandRate-0.8} />
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:14 }}>
-          <KpiCard label="Avg speed answer" value={`${liveASA}s`}       sub="target <30s"             color={liveASA >= 45 ? C.guava : liveASA >= 30 ? C.amber : "#0AC8A0"} warning={liveASA >= 30} />
+          <KpiCard label="Avg speed answer" value={`${liveASA}s`}       sub="target <30s"             color={liveASA >= 45 ? C.guava : liveASA >= 30 ? C.amber : "#0AC8A0"} warning={liveASA >= 30} prev={liveASA-6} />
           <KpiCard label="Avg handle time"  value={fmtTIS(avgAHT)}      sub="all queues avg"          color="#0AC8A0" warning={false} />
           <KpiCard label="Adherence"        value={`${adhAgents}/${RTM_AGENTS.length}`} sub={`${Math.round(adhAgents/RTM_AGENTS.length*100)}% · target 95%`} color={adhAgents/RTM_AGENTS.length >= .95 ? "#0AC8A0" : adhAgents/RTM_AGENTS.length >= .9 ? C.amber : C.guava} warning={adhAgents/RTM_AGENTS.length < .95} />
-          <KpiCard label="Agents available" value={availAgents}          sub="ready for contact"       color={availAgents >= 3 ? "#0AC8A0" : availAgents >= 1 ? C.amber : C.guava} warning={availAgents < 2} />
+          <KpiCard label="Agents available" value={availAgents}          sub="ready for contact"       color={availAgents >= 3 ? "#0AC8A0" : availAgents >= 1 ? C.amber : C.guava} warning={availAgents < 2} prev={availAgents-2} />
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1.6fr 1fr", gap:12 }}>
           <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:16 }}>
@@ -2641,23 +2810,68 @@ function RealTimeMgmtView({ role }) {
               {["10:30","11:30","12:30","13:30","14:30","16:00"].map(t => <span key={t} style={{ fontSize:10, color:C.tx2 }}>{t}</span>)}
             </div>
           </div>
-          <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:16, display:"flex", flexDirection:"column", gap:9 }}>
-            <div style={{ fontSize:14, fontWeight:600, color:C.tx0, marginBottom:2 }}>Interventions</div>
+          <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:16, display:"flex", flexDirection:"column", gap:8, overflowY:"auto" }}>
+            <div style={{ fontSize:14, fontWeight:600, color:C.tx0, marginBottom:2 }}>Supervisor Actions</div>
+
+            {/* Expanded alert panel */}
             {rawAlerts.length > 0 && (
-              <div style={{ background:"rgba(244,93,72,.07)", border:".5px solid rgba(244,93,72,.18)", borderRadius:10, padding:"8px 11px" }}>
-                <div style={{ fontSize:11, fontWeight:600, color:C.guava, marginBottom:4 }}>⚠ {rawAlerts.length} active alert{rawAlerts.length>1?"s":""}</div>
-                {rawAlerts.slice(0,2).map(a => <div key={a.id} style={{ fontSize:10, color:C.tx2, marginBottom:2 }}>{a.msg.substring(0,55)}{a.msg.length>55?"…":""}</div>)}
+              <div style={{ background:"rgba(244,93,72,.07)", border:".5px solid rgba(244,93,72,.18)", borderRadius:10, padding:"9px 11px" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.guava, marginBottom:6 }}>⚠ {rawAlerts.length} active alert{rawAlerts.length>1?"s":""}</div>
+                {rawAlerts.map(a => (
+                  <div key={a.id} style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:6, marginBottom:6 }}>
+                    <div style={{ fontSize:10, color:C.tx1, flex:1 }}>{a.msg}</div>
+                    <button onClick={() => { setDismissed(d=>new Set([...d,a.id])); window.prismToast?.("Alert acknowledged","info"); }}
+                      style={{ fontSize:9, padding:"2px 7px", borderRadius:5, background:"rgba(244,93,72,.12)", border:".5px solid rgba(244,93,72,.2)", color:C.guava, cursor:"pointer", whiteSpace:"nowrap" }}>Ack</button>
+                  </div>
+                ))}
               </div>
             )}
-            <button onClick={() => setAlertSent(v=>!v)} style={{ padding:"9px 14px", borderRadius:10, background:alertSent?"rgba(10,200,150,.1)":"rgba(244,93,72,.1)", border:`.5px solid ${alertSent?"rgba(10,200,150,.3)":"rgba(244,93,72,.28)"}`, color:alertSent?"#0AC8A0":C.guava, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7 }}>
-              {alertSent ? "✓ Alert sent to agents" : "📣 Send adherence alert"}
+
+            {/* Adherence alert */}
+            <button onClick={() => setAlertSent(v=>!v)} style={{ padding:"8px 12px", borderRadius:9, background:alertSent?"rgba(10,200,150,.1)":"rgba(244,93,72,.1)", border:`.5px solid ${alertSent?"rgba(10,200,150,.28)":"rgba(244,93,72,.22)"}`, color:alertSent?"#0AC8A0":C.guava, fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7 }}>
+              {alertSent ? "✓ Adherence alert sent" : "📣 Send adherence alert"}
             </button>
-            <button onClick={() => setOtOpen(v=>!v)} style={{ padding:"9px 14px", borderRadius:10, background:`${C.amber}10`, border:`.5px solid ${C.amber}28`, color:C.amber, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7 }}>
-              ⚡ {otOpen ? "Close OT offer" : "Open OT offer"}
+
+            {/* Pull from break */}
+            <button onClick={() => window.prismToast?.("2 agents pulled from break — coverage improving","info")}
+              style={{ padding:"8px 12px", borderRadius:9, background:"rgba(255,255,255,.04)", border:`.5px solid ${C.bd}`, color:C.tx2, fontSize:12, fontWeight:500, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7 }}>
+              ☕ Pull agents from break
             </button>
-            {otOpen && <div style={{ background:`${C.amber}0A`, border:`.5px solid ${C.amber}20`, borderRadius:9, padding:"9px 11px", fontSize:11, color:C.tx2, animation:"fade-up .2s ease" }}>OT open · 4 eligible agents notified · 2hr max · BenOps priority</div>}
-            <button onClick={() => window.prismToast?.("2 agents pulled from break — coverage improving","info")} style={{ padding:"9px 14px", borderRadius:10, background:"rgba(255,255,255,.04)", border:`.5px solid ${C.bd}`, color:C.tx2, fontSize:13, fontWeight:500, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7 }}>☕ Pull agents from break</button>
-            <button onClick={() => window.prismToast?.("VTO offer sent to 6 overstaffed agents","success")} style={{ padding:"9px 14px", borderRadius:10, background:"rgba(127,119,221,.07)", border:`.5px solid rgba(127,119,221,.2)`, color:C.purple, fontSize:13, fontWeight:500, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7 }}>✈ Open VTO offer</button>
+
+            {/* OT / VTO push workflow */}
+            <button onClick={() => setOtOpen(v=>!v)} style={{ padding:"8px 12px", borderRadius:9, background:otOpen?`${C.amber}14`:`${C.amber}08`, border:`.5px solid ${C.amber}${otOpen?"40":"22"}`, color:C.amber, fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", gap:7 }}>
+              ⚡ {otOpen ? "▼ OT / VTO offer open" : "Open OT / VTO offer"}
+            </button>
+            {otOpen && (
+              <OTVTOModal onClose={() => setOtOpen(false)} />
+            )}
+          </div>
+        </div>
+
+        {/* Interval F vs A chart */}
+        <div style={{ marginTop:12, background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, padding:16 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div style={{ fontSize:13, fontWeight:600, color:C.tx0 }}>Interval Forecast vs Actual · Today</div>
+            <div style={{ display:"flex", gap:10 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:C.tx2 }}><div style={{ width:10, height:10, borderRadius:2, background:`${C.kale}50` }}/>Forecast</div>
+              <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:C.tx2 }}><div style={{ width:10, height:10, borderRadius:2, background:C.kale }}/>Actual</div>
+              <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:C.tx2 }}><div style={{ width:10, height:10, borderRadius:2, background:"rgba(255,255,255,.06)" }}/>Projected</div>
+            </div>
+          </div>
+          <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:70 }}>
+            {intervals.map((iv, i) => (
+              <div key={i} style={{ flex:1, display:"flex", gap:1, alignItems:"flex-end", height:"100%", position:"relative" }}>
+                <div style={{ flex:1, height:`${(iv.f/iMax)*100}%`, background:`${C.kale}38`, borderRadius:"3px 3px 0 0" }} title={`Forecast: ${iv.f}`} />
+                <div style={{ flex:1, height:`${((iv.a||0)/iMax)*100}%`, background:iv.a!=null?C.kale:"rgba(255,255,255,.06)", borderRadius:"3px 3px 0 0", opacity:iv.a!=null?1:.5 }} title={iv.a!=null?`Actual: ${iv.a}`:`Projected: ${iv.f}`} />
+              </div>
+            ))}
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", marginTop:6 }}>
+            {intervals.filter((_,i) => i%4===0).map(iv => <span key={iv.t} style={{ fontSize:10, color:C.tx2 }}>{iv.t}</span>)}
+          </div>
+          <div style={{ marginTop:8, display:"flex", gap:14 }}>
+            <div style={{ fontSize:11, color:C.tx2 }}>Forecast accuracy (completed intervals): <span style={{ color:"#0AC8A0", fontWeight:600 }}>96.2%</span></div>
+            <div style={{ fontSize:11, color:C.tx2 }}>Variance: <span style={{ color:C.amber, fontWeight:600 }}>+4 contacts</span> over forecast</div>
           </div>
         </div>
       </div>
@@ -3643,8 +3857,14 @@ function LoginScreen({ onLogin }) {
                       {u.avatar}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: C.tx0 }}>{u.name}</div>
-                      <div style={{ fontSize: 12, color: C.tx2 }}>{u.title} · {u.pillar}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: C.tx0 }}>{u.name}</span>
+                        {u.level && <span style={{ fontSize:9, fontWeight:700, color:rc, background:`${rc}18`, border:`.5px solid ${rc}35`, borderRadius:5, padding:"1px 5px", letterSpacing:".06em" }}>{u.level}</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: C.tx2 }}>
+                        {u.subRole ? (ROLES_CONFIG[selRole]?.subRoles[u.subRole]?.label || u.title) : u.title}
+                        {u.pillar !== "All" ? ` · ${u.pillar}` : ""}
+                      </div>
                     </div>
                     {active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: rc, boxShadow: `0 0 10px ${rc}` }} />}
                   </div>
@@ -6867,6 +7087,138 @@ function NotificationCenter({ role, notifs, setNotifs, onClose }) {
   );
 }
 
+// ─── ROLES ADMIN VIEW ─────────────────────────────────────────
+function RolesAdminView() {
+  const [expandedRole, setExpandedRole] = useState(null);
+  const [activeTab, setActiveTab] = useState("structure");
+  const roleColors = { agent:C.purple, manager:C.amber, wfm:C.kale };
+  const roleIcons  = { agent:"★", manager:"◈", wfm:"⚡" };
+  const allPerms = [
+    { key:"view.dashboard",  label:"View dashboard" },
+    { key:"view.schedule",   label:"View schedule" },
+    { key:"view.timeoff",    label:"Time off" },
+    { key:"view.achievements",label:"Achievements" },
+    { key:"view.queue",      label:"Queue analytics" },
+    { key:"view.rtm",        label:"Real Time Mgmt" },
+    { key:"view.forecast",   label:"ClearCast / Forecast" },
+    { key:"view.approvals",  label:"Approvals" },
+    { key:"edit.schedule",   label:"Edit schedules" },
+    { key:"edit.roster",     label:"Edit roster" },
+    { key:"view.connections",label:"Live Connections" },
+    { key:"admin.roles",     label:"Role administration" },
+  ];
+  return (
+    <div>
+      <div style={{ fontSize:9, fontWeight:800, color:C.kale, letterSpacing:".18em", textTransform:"uppercase", marginBottom:5, opacity:.7 }}>Workforce Intelligence</div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+        <div style={{ fontSize:17, fontWeight:700, color:C.tx0 }}>Roles & Permissions</div>
+        <div style={{ fontSize:11, color:C.tx2, background:`${C.amber}12`, border:`.5px solid ${C.amber}30`, borderRadius:8, padding:"4px 10px" }}>
+          ⚠ Live editing coming Q3 2026 — config is read-only
+        </div>
+      </div>
+      <div style={{ fontSize:12, color:C.tx2, marginBottom:16 }}>Define role structure, sub-roles, levels, and feature permissions across the platform.</div>
+
+      <div style={{ display:"flex", gap:2, background:"rgba(255,255,255,.04)", borderRadius:10, padding:3, marginBottom:16, width:"fit-content" }}>
+        {[["structure","Structure"],["permissions","Permissions"],["members","Members"]].map(([t,l]) => (
+          <button key={t} onClick={() => setActiveTab(t)} style={{ padding:"5px 14px", borderRadius:8, fontSize:12, fontWeight:activeTab===t?600:400, background:activeTab===t?"rgba(255,255,255,.1)":"none", color:activeTab===t?C.tx0:C.tx2, border:activeTab===t?`.5px solid ${C.bd}`:"none", cursor:"pointer", transition:"all .15s" }}>{l}</button>
+        ))}
+      </div>
+
+      {activeTab === "structure" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {Object.entries(ROLES_CONFIG).map(([roleKey, cfg]) => {
+            const rc = roleColors[roleKey]; const icon = roleIcons[roleKey];
+            const isOpen = expandedRole === roleKey;
+            return (
+              <div key={roleKey} style={{ background:C.card, border:`.5px solid ${isOpen?rc+"40":C.bd}`, borderLeft:`3px solid ${rc}`, borderRadius:14, overflow:"hidden", transition:"all .2s" }}>
+                <div onClick={() => setExpandedRole(isOpen ? null : roleKey)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", cursor:"pointer" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${rc}18`, border:`.5px solid ${rc}35`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>{icon}</div>
+                    <div>
+                      <div style={{ fontSize:14, fontWeight:600, color:C.tx0 }}>{ROLE_META[roleKey]?.label}</div>
+                      <div style={{ fontSize:11, color:C.tx2 }}>{Object.keys(cfg.subRoles).length} sub-roles · {cfg.levels.length} levels</div>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    {cfg.levels.map(l => <span key={l} style={{ fontSize:9, fontWeight:700, color:rc, background:`${rc}15`, borderRadius:5, padding:"2px 6px", letterSpacing:".05em" }}>{l}</span>)}
+                    <span style={{ color:C.tx2, fontSize:12, marginLeft:4 }}>{isOpen?"▲":"▼"}</span>
+                  </div>
+                </div>
+                {isOpen && (
+                  <div style={{ padding:"0 18px 16px", borderTop:`.5px solid ${C.bd}`, paddingTop:14, animation:"fade-up .2s ease" }}>
+                    <div style={{ fontSize:11, fontWeight:600, color:C.tx2, textTransform:"uppercase", letterSpacing:".08em", marginBottom:10 }}>Sub-roles</div>
+                    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:8 }}>
+                      {Object.entries(cfg.subRoles).map(([srKey, sr]) => (
+                        <div key={srKey} style={{ background:"rgba(255,255,255,.03)", border:`.5px solid ${C.bd}`, borderRadius:10, padding:"10px 14px" }}>
+                          <div style={{ fontSize:13, fontWeight:600, color:C.tx0, marginBottom:3 }}>{sr.label}</div>
+                          <div style={{ fontSize:11, color:C.tx2 }}>{sr.desc}</div>
+                          {sr.focusView && <div style={{ marginTop:6, fontSize:10, color:rc, background:`${rc}12`, borderRadius:6, padding:"2px 7px", display:"inline-block" }}>Focus: {sr.focusView}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {activeTab === "permissions" && (
+        <div style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, overflow:"hidden" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1.6fr repeat(3,1fr)", padding:"10px 16px", borderBottom:`.5px solid ${C.bd}`, background:"rgba(255,255,255,.02)" }}>
+            <div style={{ fontSize:10, fontWeight:600, color:C.tx2, textTransform:"uppercase", letterSpacing:".06em" }}>Feature</div>
+            {["agent","manager","wfm"].map(r => <div key={r} style={{ fontSize:10, fontWeight:600, color:roleColors[r], textTransform:"uppercase", letterSpacing:".06em", textAlign:"center" }}>{ROLE_META[r]?.label}</div>)}
+          </div>
+          {allPerms.map((p, i) => (
+            <div key={p.key} style={{ display:"grid", gridTemplateColumns:"1.6fr repeat(3,1fr)", padding:"9px 16px", borderBottom:i<allPerms.length-1?`.5px solid ${C.bd}`:undefined, background:i%2?"rgba(255,255,255,.01)":undefined }}>
+              <div style={{ fontSize:12, color:C.tx1 }}>{p.label}</div>
+              {["agent","manager","wfm"].map(r => (
+                <div key={r} style={{ textAlign:"center" }}>
+                  <span style={{ fontSize:13, color:ROLES_CONFIG[r].permissions[p.key]?"#0AC8A0":"rgba(255,255,255,.15)" }}>
+                    {ROLES_CONFIG[r].permissions[p.key] ? "✓" : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "members" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {Object.entries(USERS).map(([roleKey, members]) => {
+            const rc = roleColors[roleKey];
+            return (
+              <div key={roleKey} style={{ background:C.card, border:`.5px solid ${C.bd}`, borderRadius:14, overflow:"hidden" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 16px", borderBottom:`.5px solid ${C.bd}`, background:"rgba(255,255,255,.02)" }}>
+                  <span style={{ fontSize:14 }}>{roleIcons[roleKey]}</span>
+                  <span style={{ fontSize:13, fontWeight:600, color:rc }}>{ROLE_META[roleKey]?.label}</span>
+                  <span style={{ fontSize:11, color:C.tx2, marginLeft:4 }}>{members.length} member{members.length>1?"s":""}</span>
+                </div>
+                <div style={{ padding:12, display:"flex", flexDirection:"column", gap:6 }}>
+                  {members.map(u => (
+                    <div key={u.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", borderRadius:10, background:"rgba(255,255,255,.025)" }}>
+                      <div style={{ width:34, height:34, borderRadius:9, background:`${rc}18`, border:`.5px solid ${rc}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:rc, flexShrink:0 }}>{u.avatar}</div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, fontWeight:500, color:C.tx0 }}>{u.name}</div>
+                        <div style={{ fontSize:11, color:C.tx2 }}>
+                          {u.subRole ? (ROLES_CONFIG[roleKey]?.subRoles[u.subRole]?.label || u.title) : u.title}
+                        </div>
+                      </div>
+                      {u.level && <span style={{ fontSize:9, fontWeight:700, color:rc, background:`${rc}18`, borderRadius:5, padding:"2px 6px", letterSpacing:".05em" }}>{u.level}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════
 // MAIN APP
 // ══════════════════════════════════════════════════════════════
@@ -6883,7 +7235,13 @@ export default function PrismPlatform() {
   const [priOpen, setPriOpen] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("prism-theme") || "dark");
-  C = THEMES[theme];
+  const [holidayBannerDismissed, setHolidayBannerDismissed] = useState(() => localStorage.getItem("prism-holiday-banner") === TODAY_LABEL);
+  const activeHoliday = getActiveHoliday();
+  C = { ...THEMES[theme] };
+  if (theme === "festive" && activeHoliday) {
+    C.guava = activeHoliday.guava; C.kale = activeHoliday.kale; C.amber = activeHoliday.amber;
+    C.bg = activeHoliday.bg;
+  }
   const [founderOpen, setFounderOpen] = useState(false);
   const logoClicksRef = useRef(0);
   const logoClickTimerRef = useRef(null);
@@ -7035,6 +7393,10 @@ export default function PrismPlatform() {
     if (view === "patterns") {
       if (role !== "wfm") return <AccessDenied msg="Work pattern builder is a WFM analyst function. Contact your WFM team to request pattern changes." />;
       return <WorkPatternBuilder agents={ALL_AGENTS} onAssign={() => {}} onClose={() => {}} />;
+    }
+    if (view === "roles") {
+      if (role !== "wfm") return <AccessDenied msg="Role & permission administration is restricted to Workforce Intelligence." />;
+      return <RolesAdminView />;
     }
     return null;
   }
@@ -7193,9 +7555,9 @@ export default function PrismPlatform() {
 
             {/* Theme toggle */}
             <button onClick={() => { const next = theme==="dark"?"light":theme==="light"?"festive":"dark"; setTheme(next); localStorage.setItem("prism-theme",next); }}
-              style={{ padding:"5px 9px", borderRadius:8, background:"transparent", border:`.5px solid ${C.bd}`, color:C.tx1, fontSize:14, cursor:"pointer", transition:"all .15s", flexShrink:0 }}
-              title={theme==="dark"?"Dark mode · switch to light":theme==="light"?"Light mode · switch to festive":"Festive mode · switch to dark"}>
-              {theme==="dark"?"🌙":theme==="light"?"☀️":"🎉"}
+              style={{ padding:"5px 9px", borderRadius:8, background: theme==="festive"&&activeHoliday?`${activeHoliday.guava}18`:"transparent", border:`.5px solid ${theme==="festive"&&activeHoliday?activeHoliday.guava+"40":C.bd}`, color:C.tx1, fontSize:14, cursor:"pointer", transition:"all .15s", flexShrink:0 }}
+              title={theme==="dark"?"Dark mode · switch to light":theme==="light"?"Light mode · switch to festive":`Festive${activeHoliday?` · ${activeHoliday.name}`:""} · switch to dark`}>
+              {theme==="dark"?"🌙":theme==="light"?"☀️":activeHoliday?activeHoliday.emoji:"🎉"}
             </button>
 
             {/* Sound toggle */}
@@ -7230,6 +7592,18 @@ export default function PrismPlatform() {
           </div>
 
           <Ticker role={auth.role} />
+
+          {/* Holiday banner */}
+          {activeHoliday && !holidayBannerDismissed && (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 18px", background:`linear-gradient(90deg,${activeHoliday.guava}22,${activeHoliday.kale}18)`, borderBottom:`.5px solid ${activeHoliday.guava}30`, animation:"fade-up .4s ease" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:16 }}>{activeHoliday.emoji}</span>
+                <span style={{ fontSize:12, fontWeight:600, color:C.tx0 }}>{activeHoliday.msg}</span>
+                <span style={{ fontSize:11, color:C.tx2 }}>· From the Prism team</span>
+              </div>
+              <button onClick={() => { setHolidayBannerDismissed(true); localStorage.setItem("prism-holiday-banner", TODAY_LABEL); }} style={{ background:"none", border:"none", color:C.tx2, cursor:"pointer", fontSize:16, lineHeight:1, padding:"0 4px" }}>×</button>
+            </div>
+          )}
 
           <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden", maxHeight: "calc(100vh - 86px)" }}>
             <Sidebar role={auth.role} view={view} onNav={nav} />
