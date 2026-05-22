@@ -1585,16 +1585,42 @@ function PriWaveform() {
 }
 
 function PriDrawer({ auth, view, onClose }) {
+  // Derive rich agent context when the user is an agent — injected into every Pri message
+  const agentCtx = auth?.role === "agent" ? {
+    name:        auth.name?.split(" ")[0] || "there",
+    fullName:    auth.name,
+    pillar:      auth.pillar || "CX",
+    adherence:   auth.adherence || 94,
+    streak:      auth.streak || 1,
+    xp:          auth.xp || 0,
+    tier:        (auth.xp||0) >= 5000 ? "Gold" : (auth.xp||0) >= 2500 ? "Silver" : (auth.xp||0) >= 1000 ? "Bronze" : "Rookie",
+    xpToGold:    Math.max(0, 5000 - (auth.xp||0)),
+    contactsToday: 47,
+    floorSL:     87,
+    level:       auth.level || "L1",
+  } : null;
+
   const VIEW_GREETINGS = {
-    ops:         "I see you're in Intraday Ops — SL risk detected at 2pm. Want me to run the coverage analysis?",
-    approvals:   "3 approvals pending. 2 are safe to auto-approve. Want a risk breakdown on the flagged ones?",
-    coverage:    "Heatmap looks solid overall, but BenOps has a gap 8–10:30am. Want me to model a fix?",
-    forecast:    "Forecast accuracy is at a 5-week high. I spotted a recurring FEIN pattern — want details?",
-    clearcast:   "86 forecast groups loaded. Want me to identify which CTs are currently off-model?",
-    queue:       "Queue depth is elevated. Want me to pull the SL projection for the next 2 hours?",
+    ops:             "I see you're in Intraday Ops — SL risk detected at 2pm. Want me to run the coverage analysis?",
+    approvals:       "3 approvals pending. 2 are safe to auto-approve. Want a risk breakdown on the flagged ones?",
+    coverage:        "Heatmap looks solid overall, but BenOps has a gap 8–10:30am. Want me to model a fix?",
+    forecast:        "Forecast accuracy is at a 5-week high. I spotted a recurring FEIN pattern — want details?",
+    clearcast:       "86 forecast groups loaded. Want me to identify which CTs are currently off-model?",
+    queue:           "Queue depth is elevated. Want me to pull the SL projection for the next 2 hours?",
     "wfm-dashboard": "Platform Prism Score is 87. BenOps SL is the top drag — want a fix plan?",
   };
-  const greeting = (view && VIEW_GREETINGS[view]) || "Hey! I'm Pri — your Prism AI. Ask me anything about the operation.";
+
+  const greeting = (() => {
+    if (agentCtx) {
+      const { name, adherence, streak, xpToGold, xp, tier, floorSL } = agentCtx;
+      if (adherence >= 97) return `Hey ${name} — ${adherence}% adherence right now. You're having a top-10% day on the floor and I can see it. I've got your full stats loaded. What do you need?`;
+      if (streak >= 14)   return `Hey ${name} — ${streak}-day streak. ${tier} Gustie, ${xpToGold.toLocaleString()} XP from Gold. I've run the trajectory whenever you want it. What's on your mind?`;
+      if (xpToGold <= 500) return `Hey ${name} — ${xpToGold} XP from Gold Gustie. You're not chasing it anymore. Ask me anything and I'll give you the exact breakdown.`;
+      if (streak >= 7)    return `Hey ${name} — ${streak}-day streak, ${adherence}% adherence. Looking solid. You're contributing to that ${floorSL}% floor SL. What can I help with?`;
+      return `Hey ${name} — I've got your context loaded: ${adherence}% adherence, ${streak}-day streak. Ask me anything about your shift, your numbers, or what's next.`;
+    }
+    return (view && VIEW_GREETINGS[view]) || "Hey! I'm Pri — your Prism AI. Ask me anything about the operation.";
+  })();
   const [msgs, setMsgs] = useState([
     { role:"pri", text: greeting, ts:"now" }
   ]);
@@ -1618,6 +1644,15 @@ function PriDrawer({ auth, view, onClose }) {
           ? `\n\nLIVE PRISM DATA: ${liveResult.title} — ${liveResult.body}${liveResult.tag ? ` [${liveResult.tag}]` : ""}`
           : "";
         const viewCtx = view ? `\n\nCURRENT VIEW: The user is currently on the "${view}" screen. Tailor your response to be relevant to what they're looking at.` : "";
+        const agentCtxStr = agentCtx ? `\n\nLIVE AGENT CONTEXT — You are talking to this specific agent. Use their exact data in every response. Never be generic when you have real numbers:
+- Name: ${agentCtx.name} (${agentCtx.fullName}, ${agentCtx.pillar} pillar, ${agentCtx.level})
+- Adherence today: ${agentCtx.adherence}% (target: 95%+) — ${agentCtx.adherence >= 95 ? "ABOVE target, performing well" : "BELOW target, needs attention"}
+- Streak: ${agentCtx.streak} consecutive adherent days${agentCtx.streak >= 7 ? " — top 15% for floor consistency" : ""}
+- XP: ${agentCtx.xp.toLocaleString()} total | Tier: ${agentCtx.tier} Gustie | ${agentCtx.xpToGold.toLocaleString()} XP from Gold
+- Contacts handled today: ${agentCtx.contactsToday}
+- Floor SL right now: ${agentCtx.floorSL}% (target: 85%) — their adherence directly contributes to this number
+- At 420 XP/month average, they reach Gold Gustie in approximately ${Math.ceil(agentCtx.xpToGold/420)} month(s)
+COACHING STYLE: Be direct, specific, and use their real numbers. Celebrate wins. Give concrete next steps. If they ask about Gold Gustie, tell them exactly when they'll hit it. If they ask why adherence matters, connect it to the ${agentCtx.floorSL}% floor SL. Make them feel like a professional, not a headcount.` : "";
         const resp = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
           headers: {
@@ -1629,7 +1664,7 @@ function PriDrawer({ auth, view, onClose }) {
           body: JSON.stringify({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 350,
-            system: PRI_SYSTEM_PROMPT + liveCtx + viewCtx,
+            system: PRI_SYSTEM_PROMPT + liveCtx + viewCtx + agentCtxStr,
             messages: [{ role:"user", content: q }],
           }),
         });
@@ -4342,6 +4377,38 @@ function AgentDashboard({ user, onNav, onPri }) {
             {m.sub && <div style={{ fontSize:10, color:C.tx2, marginTop:1 }}>{m.sub}</div>}
           </div>
         ))}
+      </div>
+
+      {/* ─── FLOOR IMPACT ─── */}
+      <div style={{ marginBottom:14, animation:"fade-up .4s ease .12s both" }}>
+        <div style={{ background:C.card, border:`.5px solid ${C.kale}28`, borderRadius:14, padding:"14px 16px", position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:-20, right:-20, width:90, height:90, borderRadius:"50%", background:`${C.kale}0A`, filter:"blur(22px)", pointerEvents:"none" }} />
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:11 }}>
+            <div style={{ width:6, height:6, borderRadius:"50%", background:"#0AC8A0", boxShadow:"0 0 6px #0AC8A0", animation:"lp 1.4s ease-in-out infinite" }} />
+            <div style={{ fontSize:11, fontWeight:700, color:"#0AC8A0", letterSpacing:".08em" }}>YOUR FLOOR IMPACT</div>
+          </div>
+          <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
+            <div style={{ flexShrink:0 }}>
+              <div style={{ fontSize:10, color:C.tx2, marginBottom:2, textTransform:"uppercase", letterSpacing:".06em" }}>Floor SL now</div>
+              <div key={liveTick} style={{ fontSize:28, fontWeight:800, color:"#0AC8A0", lineHeight:1, animation:"val-pop .3s ease" }}>{87+(liveTick%5===0?1:liveTick%7===0?-1:0)}%</div>
+              <div style={{ fontSize:10, color:C.kale, marginTop:2, fontWeight:600 }}>↑ vs 85% target</div>
+            </div>
+            <div style={{ width:1, background:C.bd, alignSelf:"stretch", flexShrink:0 }} />
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, color:C.tx0, fontWeight:500, marginBottom:8, lineHeight:1.5 }}>
+                You're 1 of <strong style={{ color:"#0AC8A0" }}>4 agents</strong> on the floor holding 95%+ adherence right now
+              </div>
+              <div style={{ display:"flex", gap:5 }}>
+                {[["LH","LaKeisha H.",C.amber],["NW","Nia W.",C.purple],["AD","Ashley D.",C.kale],["JT","You",C.guava]].map(([init,name,col])=>(
+                  <div key={init} title={name} style={{ width:27, height:27, borderRadius:"50%", background:`${col}20`, border:`.5px solid ${col}45`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:700, color:col }}>{init}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop:11, padding:"9px 12px", borderRadius:9, background:`${C.amber}09`, border:`.5px solid ${C.amber}22`, fontSize:12, color:C.tx1, lineHeight:1.6 }}>
+            💡 If 2 of you drop to 80% adherence, floor SL falls to <strong style={{ color:C.amber }}>~82%</strong> — below target. You're part of what's holding it above 85% right now.
+          </div>
+        </div>
       </div>
 
       {/* ─── QUICK ACTIONS ─── */}
