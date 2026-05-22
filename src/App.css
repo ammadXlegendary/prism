@@ -1,0 +1,5 @@
+/* Prism Platform fills the viewport; keep shell minimal. */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
