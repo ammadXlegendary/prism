@@ -40,30 +40,63 @@ const THEMES = {
 let C = THEMES.dark;
 
 // ─── HOLIDAY SYSTEM ────────────────────────────────────────────
+function hexLerp(a, b, t) {
+  const p = h => [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+  const [r1,g1,b1]=p(a),[r2,g2,b2]=p(b);
+  return `#${Math.round(r1+(r2-r1)*t).toString(16).padStart(2,'0')}${Math.round(g1+(g2-g1)*t).toString(16).padStart(2,'0')}${Math.round(b1+(b2-b1)*t).toString(16).padStart(2,'0')}`;
+}
+function nthWeekday(y, mo, wd, n) {
+  if (n === -1) { const d=new Date(y,mo,0); while(d.getDay()!==wd) d.setDate(d.getDate()-1); return d; }
+  const d=new Date(y,mo-1,1); let c=0;
+  for(;;){ if(d.getDay()===wd && ++c===n) return d; d.setDate(d.getDate()+1); }
+}
 const HOLIDAY_PALETTES = {
   "New Year's":      { bg:"#080B18", guava:"#FFD700", kale:"#00E5FF", amber:"#FF69B4", emoji:"🎆", msg:"Happy New Year!" },
+  "MLK Day":         { bg:"#080A0F", guava:"#F5B800", kale:"#1A3A6E", amber:"#F5B800", emoji:"✊", msg:"Honoring Dr. Martin Luther King Jr." },
   "Valentine's Day": { bg:"#180810", guava:"#FF4F81", kale:"#FF8FAB", amber:"#FF4F81", emoji:"💝", msg:"Happy Valentine's Day!" },
+  "Presidents' Day": { bg:"#060810", guava:"#CC3333", kale:"#2244AA", amber:"#DDDDEE", emoji:"🦅", msg:"Happy Presidents' Day!" },
   "St. Patrick's":   { bg:"#061408", guava:"#2DB54A", kale:"#70C040", amber:"#FFD700", emoji:"🍀", msg:"Happy St. Patrick's Day!" },
+  "Mother's Day":    { bg:"#120810", guava:"#FF80AB", kale:"#CE93D8", amber:"#FFCC02", emoji:"💐", msg:"Happy Mother's Day!" },
   "Memorial Day":    { bg:"#060816", guava:"#B22234", kale:"#3C3B6E", amber:"#C8C8D0", emoji:"🇺🇸", msg:"Happy Memorial Day!" },
   "Juneteenth":      { bg:"#060F0A", guava:"#EF3340", kale:"#00853E", amber:"#EF3340", emoji:"✊", msg:"Happy Juneteenth!" },
+  "Father's Day":    { bg:"#06080F", guava:"#4488CC", kale:"#2255AA", amber:"#88AADD", emoji:"👔", msg:"Happy Father's Day!" },
   "4th of July":     { bg:"#060816", guava:"#C01020", kale:"#3C3B6E", amber:"#C8C8D0", emoji:"🎇", msg:"Happy 4th of July!" },
   "Labor Day":       { bg:"#08060F", guava:"#5060D0", kale:"#4A78C0", amber:"#C0C0D0", emoji:"💪", msg:"Happy Labor Day!" },
   "Halloween":       { bg:"#0C0608", guava:"#FF7518", kale:"#9932CC", amber:"#FF7518", emoji:"🎃", msg:"Happy Halloween!" },
+  "Veterans Day":    { bg:"#060A06", guava:"#B22234", kale:"#4A6741", amber:"#C8C8D0", emoji:"🎖️", msg:"Thank You, Veterans!" },
   "Thanksgiving":    { bg:"#100800", guava:"#D2691E", kale:"#CC8B00", amber:"#E8A020", emoji:"🦃", msg:"Happy Thanksgiving!" },
   "Christmas":       { bg:"#06100A", guava:"#CC0000", kale:"#006400", amber:"#FFD700", emoji:"🎄", msg:"Merry Christmas!" },
   "New Year's Eve":  { bg:"#080810", guava:"#FFD700", kale:"#B0B0C0", amber:"#FF69B4", emoji:"🥂", msg:"Happy New Year's Eve!" },
 };
-const HOLIDAY_WINDOWS = [
-  [1,1,"New Year's",0,2],[2,14,"Valentine's Day",3,1],[3,17,"St. Patrick's",3,1],
-  [5,27,"Memorial Day",3,1],[6,19,"Juneteenth",3,1],[7,4,"4th of July",3,2],
-  [9,2,"Labor Day",3,1],[10,31,"Halloween",7,1],[11,26,"Thanksgiving",3,2],
-  [12,25,"Christmas",7,2],[12,31,"New Year's Eve",3,0],
-];
+function getHolidayWindows(y) {
+  return [
+    { date:new Date(y,0,1),         name:"New Year's",      before:4,  after:2  },
+    { date:nthWeekday(y,1,1,3),     name:"MLK Day",         before:7,  after:1  },
+    { date:new Date(y,1,14),        name:"Valentine's Day", before:7,  after:1  },
+    { date:nthWeekday(y,2,1,3),     name:"Presidents' Day", before:5,  after:1  },
+    { date:new Date(y,2,17),        name:"St. Patrick's",   before:5,  after:1  },
+    { date:nthWeekday(y,5,0,2),     name:"Mother's Day",    before:7,  after:1  },
+    { date:nthWeekday(y,5,1,-1),    name:"Memorial Day",    before:7,  after:2  },
+    { date:new Date(y,5,19),        name:"Juneteenth",      before:5,  after:1  },
+    { date:nthWeekday(y,6,0,3),     name:"Father's Day",    before:7,  after:1  },
+    { date:new Date(y,6,4),         name:"4th of July",     before:7,  after:2  },
+    { date:nthWeekday(y,9,1,1),     name:"Labor Day",       before:7,  after:2  },
+    { date:new Date(y,9,31),        name:"Halloween",       before:21, after:1  },
+    { date:new Date(y,10,11),       name:"Veterans Day",    before:5,  after:1  },
+    { date:nthWeekday(y,11,4,4),    name:"Thanksgiving",    before:10, after:3  },
+    { date:new Date(y,11,25),       name:"Christmas",       before:20, after:2  },
+    { date:new Date(y,11,31),       name:"New Year's Eve",  before:4,  after:0  },
+  ];
+}
 function getActiveHoliday() {
   const now = new Date(), yr = now.getFullYear();
-  for (const [mo,day,name,before,after] of HOLIDAY_WINDOWS) {
-    const diff = Math.round((new Date(yr,mo-1,day) - now) / 86400000);
-    if (diff >= -after && diff <= before) return { name, ...HOLIDAY_PALETTES[name] };
+  for (const { date, name, before, after } of [...getHolidayWindows(yr), ...getHolidayWindows(yr+1)]) {
+    const diff = Math.round((date - now) / 86400000);
+    if (diff < -after || diff > before) continue;
+    const intensity = diff <= 0
+      ? Math.max(0.3, 1 + diff * 0.25)
+      : before <= 1 ? 1.0 : 0.4 + 0.6 * (1 - (diff - 1) / (before - 1));
+    return { name, ...HOLIDAY_PALETTES[name], daysUntil: diff, intensity };
   }
   return null;
 }
@@ -3762,7 +3795,18 @@ const LOGIN_PARTICLES = [
   { x:70, y:60, s:2,   c:"#0A8080", d:3.5 },
 ];
 
-function LoginScreen({ onLogin }) {
+const HOLIDAY_DECOR = {
+  "New Year's":      ["🎆","✨","🥂","🎊"], "MLK Day":         ["✊","🕊️","⭐","🌟"],
+  "Valentine's Day": ["💝","🌹","💕","💘"], "Presidents' Day": ["🦅","⭐","🇺🇸","🏛️"],
+  "St. Patrick's":   ["🍀","☘️","🌈","🎶"], "Mother's Day":    ["💐","🌸","💝","🌺"],
+  "Memorial Day":    ["🇺🇸","🌹","⭐","🎖️"],"Juneteenth":      ["✊","🌺","🎉","✨"],
+  "Father's Day":    ["👔","⚾","🏆","❤️"],  "4th of July":     ["🎇","🇺🇸","🎆","✨"],
+  "Labor Day":       ["💪","⚒️","🏛️","⭐"],  "Halloween":       ["🎃","🦇","🕷️","👻"],
+  "Veterans Day":    ["🎖️","🦅","🇺🇸","⭐"], "Thanksgiving":    ["🦃","🍂","🌽","🍁"],
+  "Christmas":       ["🎄","❄️","🎁","⭐"],  "New Year's Eve":  ["🥂","🎆","🎊","✨"],
+};
+
+function LoginScreen({ onLogin, theme, activeHoliday }) {
   const [phase, setPhase] = useState("role");
   const [selRole, setSelRole] = useState(null);
   const [selUser, setSelUser] = useState(null);
@@ -3787,32 +3831,115 @@ function LoginScreen({ onLogin }) {
 
   const rc = selRole && ROLE_META[selRole] ? ROLE_META[selRole].color : C.kale;
 
+  const isLight   = theme === "light";
+  const isFestive = theme === "festive" && !!activeHoliday;
+
+  // ── Gusto warm-light palette ──────────────────────────────────
+  const LBG   = "linear-gradient(150deg,#FAF6F1 0%,#F2EBE2 45%,#E9DFD4 100%)";
+  const LCARD  = "rgba(255,252,248,0.95)";
+  const LCARDHV= "rgba(255,249,243,1)";
+  const LCARDBD= "rgba(168,148,130,0.26)";
+  const LTX0   = "#1C1815";
+  const LTX1   = "#5C4E43";
+  const LTX2   = "#96827A";
+  const LTRACK = "rgba(0,0,0,.07)";
+
+  // ── Festive bg & accents ──────────────────────────────────────
+  const FG  = isFestive ? activeHoliday.guava : C.kale;
+  const FK  = isFestive ? activeHoliday.kale  : C.kale;
+  const FAM = isFestive ? activeHoliday.amber : C.amber;
+  const FBG = isFestive ? activeHoliday.bg    : C.bg;
+  const decor = isFestive ? (HOLIDAY_DECOR[activeHoliday.name] || ["✨","🎉","✨","🎊"]) : null;
+
+  // ── Shared computed values ────────────────────────────────────
+  const tx0  = isLight ? LTX0 : C.tx0;
+  const tx1  = isLight ? LTX1 : C.tx1;
+  const tx2  = isLight ? LTX2 : C.tx2;
+  const cardBg   = isLight ? LCARD : "rgba(17,23,40,0.72)";
+  const cardBgHv = isLight ? LCARDHV : "rgba(17,23,40,.92)";
+  const cardBd   = isLight ? LCARDBD : C.bd;
+  const cardShadowHv = isLight
+    ? `0 16px 48px rgba(0,0,0,.11),0 0 0 .5px `
+    : `0 20px 56px rgba(0,0,0,.45),0 0 0 .5px `;
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: C.bg, position: "relative", overflowX: "hidden", overflowY: "auto", padding: "40px 16px 32px" }}>
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      background: isLight ? LBG : isFestive ? `linear-gradient(155deg,${FBG} 0%,${FBG}F0 40%,#020408 100%)` : C.bg,
+      position:"relative", overflowX:"hidden", overflowY:"auto", padding:"40px 16px 32px" }}>
 
       {/* Grid overlay */}
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px)", backgroundSize: "44px 44px", pointerEvents: "none" }} />
+      <div style={{ position:"absolute", inset:0,
+        backgroundImage: isLight
+          ? "linear-gradient(rgba(0,0,0,.027) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.027) 1px,transparent 1px)"
+          : isFestive
+          ? `linear-gradient(${FG}18 1px,transparent 1px),linear-gradient(90deg,${FG}18 1px,transparent 1px)`
+          : "linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px)",
+        backgroundSize:"44px 44px", pointerEvents:"none" }} />
 
       {/* Animated colour orbs */}
-      <div style={{ position: "absolute", top: "10%", left: "14%", width: 560, height: 560, background: "radial-gradient(ellipse,rgba(10,128,128,.14) 0%,transparent 66%)", borderRadius: "50%", animation: "orb1 10s ease-in-out infinite", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: "8%", right: "10%", width: 460, height: 460, background: "radial-gradient(ellipse,rgba(244,93,72,.1) 0%,transparent 64%)", borderRadius: "50%", animation: "orb2 13s ease-in-out infinite 2s", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", top: "42%", right: "20%", width: 340, height: 340, background: "radial-gradient(ellipse,rgba(127,119,221,.09) 0%,transparent 60%)", borderRadius: "50%", animation: "orb3 15s ease-in-out infinite 5s", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: "28%", left: "6%", width: 300, height: 300, background: "radial-gradient(ellipse,rgba(239,159,39,.07) 0%,transparent 60%)", borderRadius: "50%", animation: "orb2 17s ease-in-out infinite 1s", pointerEvents: "none" }} />
+      {isLight ? (
+        <>
+          <div style={{ position:"absolute", top:"8%",  left:"12%",  width:520, height:520, background:"radial-gradient(ellipse,rgba(244,93,72,.07) 0%,transparent 66%)",  borderRadius:"50%", animation:"orb1 11s ease-in-out infinite",      pointerEvents:"none" }} />
+          <div style={{ position:"absolute", bottom:"6%",right:"9%",  width:440, height:440, background:"radial-gradient(ellipse,rgba(239,159,39,.06) 0%,transparent 64%)", borderRadius:"50%", animation:"orb2 14s ease-in-out infinite 2s",   pointerEvents:"none" }} />
+          <div style={{ position:"absolute", top:"44%", right:"18%", width:320, height:320, background:"radial-gradient(ellipse,rgba(10,128,128,.05) 0%,transparent 60%)",  borderRadius:"50%", animation:"orb3 16s ease-in-out infinite 5s",   pointerEvents:"none" }} />
+        </>
+      ) : isFestive ? (
+        <>
+          <div style={{ position:"absolute", top:"8%",  left:"12%",  width:560, height:560, background:`radial-gradient(ellipse,${FG}28 0%,transparent 66%)`,  borderRadius:"50%", animation:"orb1 10s ease-in-out infinite",    pointerEvents:"none" }} />
+          <div style={{ position:"absolute", bottom:"6%",right:"9%",  width:460, height:460, background:`radial-gradient(ellipse,${FK}1E 0%,transparent 64%)`,  borderRadius:"50%", animation:"orb2 13s ease-in-out infinite 2s", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", top:"44%", right:"18%", width:340, height:340, background:`radial-gradient(ellipse,${FAM}18 0%,transparent 60%)`, borderRadius:"50%", animation:"orb3 15s ease-in-out infinite 5s", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", bottom:"28%",left:"5%", width:300, height:300, background:`radial-gradient(ellipse,${FG}12 0%,transparent 60%)`,  borderRadius:"50%", animation:"orb2 18s ease-in-out infinite 1s", pointerEvents:"none" }} />
+        </>
+      ) : (
+        <>
+          <div style={{ position:"absolute", top:"10%", left:"14%",  width:560, height:560, background:"radial-gradient(ellipse,rgba(10,128,128,.14) 0%,transparent 66%)",  borderRadius:"50%", animation:"orb1 10s ease-in-out infinite",    pointerEvents:"none" }} />
+          <div style={{ position:"absolute", bottom:"8%",right:"10%", width:460, height:460, background:"radial-gradient(ellipse,rgba(244,93,72,.1) 0%,transparent 64%)",   borderRadius:"50%", animation:"orb2 13s ease-in-out infinite 2s", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", top:"42%", right:"20%", width:340, height:340, background:"radial-gradient(ellipse,rgba(127,119,221,.09) 0%,transparent 60%)", borderRadius:"50%", animation:"orb3 15s ease-in-out infinite 5s", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", bottom:"28%",left:"6%", width:300, height:300, background:"radial-gradient(ellipse,rgba(239,159,39,.07) 0%,transparent 60%)",  borderRadius:"50%", animation:"orb2 17s ease-in-out infinite 1s", pointerEvents:"none" }} />
+        </>
+      )}
 
       {/* Floating particles */}
       {LOGIN_PARTICLES.map((p, i) => (
-        <div key={i} style={{ position: "absolute", left: p.x + "%", top: p.y + "%", width: p.s, height: p.s, borderRadius: "50%", background: p.c, animation: `particle-breathe ${p.d}s ease-in-out infinite ${-(p.d * 0.4)}s`, pointerEvents: "none" }} />
+        <div key={i} style={{ position:"absolute", left:p.x+"%", top:p.y+"%", width:p.s, height:p.s, borderRadius:"50%",
+          background: isFestive ? [FG,FK,FAM][i%3] : isLight ? p.c+"99" : p.c,
+          animation:`particle-breathe ${p.d}s ease-in-out infinite ${-(p.d*.4)}s`, pointerEvents:"none" }} />
       ))}
 
+      {/* ── FESTIVE: corner décor + top banner ── */}
+      {isFestive && decor && (
+        <>
+          <div style={{ position:"absolute", top:0, left:0, right:0, zIndex:10,
+            background:`linear-gradient(90deg,${FG}44,${FK}2C,${FG}44)`,
+            borderBottom:`.5px solid ${FG}55`, padding:"10px 24px",
+            display:"flex", alignItems:"center", justifyContent:"center", gap:12 }}>
+            <span style={{ fontSize:22 }}>{activeHoliday.emoji}</span>
+            <span style={{ fontSize:14, fontWeight:800, color:"rgba(255,255,255,.96)", letterSpacing:".04em" }}>{activeHoliday.msg}</span>
+            <span style={{ fontSize:22 }}>{activeHoliday.emoji}</span>
+          </div>
+          <div style={{ position:"absolute", top:60, left:28,  fontSize:56, opacity:.38, animation:"orb1 7s ease-in-out infinite",    pointerEvents:"none", userSelect:"none" }}>{decor[0]}</div>
+          <div style={{ position:"absolute", top:60, right:28, fontSize:48, opacity:.32, animation:"orb2 9s ease-in-out infinite 1s",  pointerEvents:"none", userSelect:"none" }}>{decor[1]}</div>
+          <div style={{ position:"absolute", bottom:28, left:28,  fontSize:44, opacity:.30, animation:"orb3 8s ease-in-out infinite 2s",  pointerEvents:"none", userSelect:"none" }}>{decor[2]}</div>
+          <div style={{ position:"absolute", bottom:28, right:28, fontSize:52, opacity:.36, animation:"orb1 10s ease-in-out infinite .5s", pointerEvents:"none", userSelect:"none" }}>{decor[3]}</div>
+        </>
+      )}
+
       {/* Logo block */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, marginBottom: phase === "role" ? 32 : 28, animation: "fade-up .7s ease both", position: "relative", zIndex: 1 }}>
-        <PrismMark size={phase === "signing" ? 110 : 160} id="login" />
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, marginBottom:phase==="role"?32:28, animation:"fade-up .7s ease both", position:"relative", zIndex:1, marginTop:isFestive?44:0 }}>
+        <PrismMark size={phase==="signing"?110:160} id="login" />
         {phase !== "signing" && (
-          <div style={{ textAlign: "center" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}><Wordmark size={40} /></div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,.35)", letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 300, marginBottom: 14 }}>Workforce Intelligence</div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(10,128,128,.1)", border: ".5px solid rgba(10,128,128,.25)", borderRadius: 20, padding: "5px 14px", fontSize: 12, color: "rgba(10,200,150,.75)" }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#0AC8A0", animation: "lp 2s ease-in-out infinite", flexShrink: 0 }} />
+          <div style={{ textAlign:"center" }}>
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><Wordmark size={40} /></div>
+            <div style={{ fontSize:13, letterSpacing:".2em", textTransform:"uppercase", fontWeight:300, marginBottom:14,
+              color: isLight ? LTX2 : isFestive ? `${FG}BB` : "rgba(255,255,255,.35)" }}>
+              Workforce Intelligence
+            </div>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:6, borderRadius:20, padding:"5px 14px", fontSize:12,
+              background: isLight ? "rgba(10,128,128,.07)" : isFestive ? `${FG}18` : "rgba(10,128,128,.1)",
+              border:      isLight ? ".5px solid rgba(10,128,128,.2)" : isFestive ? `.5px solid ${FG}44` : ".5px solid rgba(10,128,128,.25)",
+              color:       isLight ? "#0A7070" : isFestive ? FG : "rgba(10,200,150,.75)" }}>
+              <span style={{ width:5, height:5, borderRadius:"50%", flexShrink:0,
+                background: isLight ? "#0A8080" : isFestive ? FG : "#0AC8A0", animation:"lp 2s ease-in-out infinite" }} />
               340 Gusties · 86 forecast groups · Live
             </div>
           </div>
@@ -3821,34 +3948,36 @@ function LoginScreen({ onLogin }) {
 
       {/* ── ROLE SELECTION ─────────────────────────────── */}
       {phase === "role" && (
-        <div style={{ width: "100%", maxWidth: 620, animation: "fade-up .5s ease .12s both", position: "relative", zIndex: 1 }}>
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: C.tx0, marginBottom: 6, letterSpacing: "-.025em" }}>Welcome back.</div>
-            <div style={{ fontSize: 14, color: C.tx2 }}>Your role determines what you see and can do</div>
+        <div style={{ width:"100%", maxWidth:620, animation:"fade-up .5s ease .12s both", position:"relative", zIndex:1 }}>
+          <div style={{ textAlign:"center", marginBottom:24 }}>
+            <div style={{ fontSize:20, fontWeight:700, color:tx0, marginBottom:6, letterSpacing:"-.025em" }}>Welcome back.</div>
+            <div style={{ fontSize:14, color:tx2 }}>Your role determines what you see and can do</div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14 }}>
             {Object.entries(ROLE_META).map(([role, meta], i) => (
               <div key={role}
                 onClick={() => { setSelRole(role); setSelUser(null); setPhase("user"); }}
-                style={{ background: "rgba(17,23,40,0.72)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", border: `.5px solid ${C.bd}`, borderTop: `2px solid ${meta.color}`, borderRadius: 18, padding: "24px 18px 20px", cursor: "pointer", textAlign: "center", transition: "all .22s", animation: `card-rise .5s ease ${.12 * i + .15}s both`, position: "relative", overflow: "hidden" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(17,23,40,.92)"; e.currentTarget.style.transform = "translateY(-5px)"; e.currentTarget.style.boxShadow = `0 20px 56px rgba(0,0,0,.45), 0 0 0 .5px ${meta.color}44, 0 0 48px ${meta.color}14`; e.currentTarget.style.borderColor = `${meta.color}50`; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(17,23,40,0.72)"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = C.bd; }}>
-                {/* Corner glow */}
-                <div style={{ position: "absolute", top: 0, right: 0, width: 90, height: 90, background: `radial-gradient(ellipse at top right,${meta.color}1A,transparent 70%)`, pointerEvents: "none" }} />
-                <div style={{ position: "absolute", bottom: 0, left: 0, width: 70, height: 70, background: `radial-gradient(ellipse at bottom left,${meta.color}0E,transparent 70%)`, pointerEvents: "none" }} />
-                {/* Icon bubble */}
-                <div style={{ width: 56, height: 56, borderRadius: 16, background: `${meta.color}18`, border: `.5px solid ${meta.color}38`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, margin: "0 auto 16px", position: "relative" }}>
+                style={{ background:cardBg, backdropFilter:"blur(18px)", WebkitBackdropFilter:"blur(18px)",
+                  border:`.5px solid ${cardBd}`, borderTop:`2px solid ${meta.color}`,
+                  borderRadius:18, padding:"24px 18px 20px", cursor:"pointer", textAlign:"center",
+                  transition:"all .22s", animation:`card-rise .5s ease ${.12*i+.15}s both`,
+                  position:"relative", overflow:"hidden",
+                  boxShadow: isLight ? "0 2px 12px rgba(0,0,0,.06)" : "none" }}
+                onMouseEnter={e => { e.currentTarget.style.background=cardBgHv; e.currentTarget.style.transform="translateY(-5px)"; e.currentTarget.style.boxShadow=`${cardShadowHv}${meta.color}44${isLight?"":",0 0 48px "+meta.color+"14"}`; e.currentTarget.style.borderColor=`${meta.color}50`; }}
+                onMouseLeave={e => { e.currentTarget.style.background=cardBg; e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow=isLight?"0 2px 12px rgba(0,0,0,.06)":"none"; e.currentTarget.style.borderColor=cardBd; }}>
+                <div style={{ position:"absolute", top:0, right:0, width:90, height:90, background:`radial-gradient(ellipse at top right,${meta.color}1A,transparent 70%)`, pointerEvents:"none" }} />
+                <div style={{ position:"absolute", bottom:0, left:0, width:70, height:70, background:`radial-gradient(ellipse at bottom left,${meta.color}0E,transparent 70%)`, pointerEvents:"none" }} />
+                <div style={{ width:56, height:56, borderRadius:16, background:`${meta.color}18`, border:`.5px solid ${meta.color}38`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, margin:"0 auto 16px", position:"relative" }}>
                   {meta.icon}
-                  <div style={{ position: "absolute", inset: -1, borderRadius: 17, background: `linear-gradient(135deg,${meta.color}20,transparent)`, pointerEvents: "none" }} />
+                  <div style={{ position:"absolute", inset:-1, borderRadius:17, background:`linear-gradient(135deg,${meta.color}20,transparent)`, pointerEvents:"none" }} />
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.tx0, marginBottom: 6, letterSpacing: "-.01em", lineHeight: 1.3 }}>{meta.label}</div>
-                <div style={{ fontSize: 12, color: C.tx2, lineHeight: 1.65, marginBottom: 16 }}>{meta.desc}</div>
-                {/* Feature list */}
-                <div style={{ borderTop: `.5px solid rgba(255,255,255,.06)`, paddingTop: 13, textAlign: "left" }}>
-                  {(ROLE_FEATURES[role] || []).map(f => (
-                    <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 6 }}>
-                      <span style={{ width: 4, height: 4, borderRadius: "50%", background: meta.color, flexShrink: 0, marginTop: 4 }} />
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,.5)", lineHeight: 1.5 }}>{f}</span>
+                <div style={{ fontSize:13, fontWeight:700, color:tx0, marginBottom:6, letterSpacing:"-.01em", lineHeight:1.3 }}>{meta.label}</div>
+                <div style={{ fontSize:12, color:tx2, lineHeight:1.65, marginBottom:16 }}>{meta.desc}</div>
+                <div style={{ borderTop:`.5px solid ${isLight?"rgba(0,0,0,.07)":"rgba(255,255,255,.06)"}`, paddingTop:13, textAlign:"left" }}>
+                  {(ROLE_FEATURES[role]||[]).map(f => (
+                    <div key={f} style={{ display:"flex", alignItems:"flex-start", gap:7, marginBottom:6 }}>
+                      <span style={{ width:4, height:4, borderRadius:"50%", background:meta.color, flexShrink:0, marginTop:4 }} />
+                      <span style={{ fontSize:11, color:isLight?"rgba(80,62,52,.58)":"rgba(255,255,255,.5)", lineHeight:1.5 }}>{f}</span>
                     </div>
                   ))}
                 </div>
@@ -3863,81 +3992,94 @@ function LoginScreen({ onLogin }) {
 
       {/* ── USER PICKER ─────────────────────────────── */}
       {phase === "user" && selRole && (
-        <div style={{ width: "100%", maxWidth: 500, animation: "fade-up .32s ease both", position: "relative", zIndex: 1 }}>
+        <div style={{ width:"100%", maxWidth:500, animation:"fade-up .32s ease both", position:"relative", zIndex:1 }}>
           <button onClick={() => setPhase("role")}
-            style={{ background: "none", border: "none", color: C.tx2, fontSize: 13, cursor: "pointer", marginBottom: 14, padding: 0, display: "flex", alignItems: "center", gap: 5, transition: "color .15s" }}
-            onMouseEnter={e => e.currentTarget.style.color = C.tx0}
-            onMouseLeave={e => e.currentTarget.style.color = C.tx2}>
+            style={{ background:"none", border:"none", color:tx2, fontSize:13, cursor:"pointer", marginBottom:14, padding:0, display:"flex", alignItems:"center", gap:5, transition:"color .15s" }}
+            onMouseEnter={e => e.currentTarget.style.color=tx0}
+            onMouseLeave={e => e.currentTarget.style.color=tx2}>
             ← All roles
           </button>
-          <div style={{ background: "rgba(17,23,40,0.88)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", border: `.5px solid ${C.bd}`, borderTop: `2px solid ${rc}`, borderRadius: 20, padding: 26, boxShadow: `0 28px 80px rgba(0,0,0,.55), 0 0 0 .5px ${rc}22, 0 0 60px ${rc}10` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: `${rc}18`, border: `.5px solid ${rc}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+          <div style={{ background:isLight?LCARD:"rgba(17,23,40,0.88)", backdropFilter:"blur(22px)", WebkitBackdropFilter:"blur(22px)",
+            border:`.5px solid ${cardBd}`, borderTop:`2px solid ${rc}`, borderRadius:20, padding:26,
+            boxShadow:isLight?`0 20px 60px rgba(0,0,0,.11),0 0 0 .5px ${rc}22`:`0 28px 80px rgba(0,0,0,.55),0 0 0 .5px ${rc}22,0 0 60px ${rc}10` }}>
+            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:24 }}>
+              <div style={{ width:48, height:48, borderRadius:14, background:`${rc}18`, border:`.5px solid ${rc}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>
                 {ROLE_META[selRole].icon}
               </div>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.tx0, marginBottom: 2, letterSpacing: "-.01em" }}>{ROLE_META[selRole].label}</div>
-                <div style={{ fontSize: 12, color: C.tx2 }}>Choose your account</div>
+                <div style={{ fontSize:15, fontWeight:700, color:tx0, marginBottom:2, letterSpacing:"-.01em" }}>{ROLE_META[selRole].label}</div>
+                <div style={{ fontSize:12, color:tx2 }}>Choose your account</div>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 18 }}>
+            <div style={{ display:"flex", flexDirection:"column", gap:7, marginBottom:18 }}>
               {USERS[selRole].map((u, i) => {
                 const active = selUser && selUser.id === u.id;
+                const rowBg   = active ? `${rc}12` : isLight ? "rgba(255,250,245,.55)" : "rgba(255,255,255,.025)";
+                const rowBgHv = isLight ? "rgba(255,245,237,.9)" : "rgba(255,255,255,.05)";
+                const rowBgDef= active ? `${rc}12` : rowBg;
                 return (
                   <div key={u.id} onClick={() => setSelUser(u)}
-                    style={{ display: "flex", alignItems: "center", gap: 13, padding: "12px 14px", borderRadius: 13, cursor: "pointer", border: `.5px solid ${active ? rc + "60" : C.bd}`, background: active ? `${rc}12` : "rgba(255,255,255,.025)", transition: "all .15s", animation: `fade-up .28s ease ${.05 * i}s both` }}
-                    onMouseEnter={e => { if (!active) { e.currentTarget.style.background = "rgba(255,255,255,.05)"; e.currentTarget.style.borderColor = rc + "30"; } }}
-                    onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "rgba(255,255,255,.025)"; e.currentTarget.style.borderColor = C.bd; } }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${rc}20`, border: `.5px solid ${active ? rc + "55" : rc + "28"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: rc, flexShrink: 0, boxShadow: active ? `0 0 18px ${rc}28` : "none", transition: "all .18s" }}>
+                    style={{ display:"flex", alignItems:"center", gap:13, padding:"12px 14px", borderRadius:13, cursor:"pointer",
+                      border:`.5px solid ${active?rc+"60":cardBd}`, background:rowBgDef,
+                      transition:"all .15s", animation:`fade-up .28s ease ${.05*i}s both` }}
+                    onMouseEnter={e => { if(!active){e.currentTarget.style.background=rowBgHv; e.currentTarget.style.borderColor=rc+"30";}}}
+                    onMouseLeave={e => { if(!active){e.currentTarget.style.background=rowBg; e.currentTarget.style.borderColor=cardBd;}}}>
+                    <div style={{ width:44, height:44, borderRadius:12, background:`${rc}20`, border:`.5px solid ${active?rc+"55":rc+"28"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:rc, flexShrink:0, boxShadow:active?`0 0 18px ${rc}28`:"none", transition:"all .18s" }}>
                       {u.avatar}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex:1 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: C.tx0 }}>{u.name}</span>
+                        <span style={{ fontSize:14, fontWeight:600, color:tx0 }}>{u.name}</span>
                         {u.level && <span style={{ fontSize:9, fontWeight:700, color:rc, background:`${rc}18`, border:`.5px solid ${rc}35`, borderRadius:5, padding:"1px 5px", letterSpacing:".06em" }}>{u.level}</span>}
                       </div>
-                      <div style={{ fontSize: 11, color: C.tx2 }}>
-                        {u.subRole ? (ROLES_CONFIG[selRole]?.subRoles[u.subRole]?.label || u.title) : u.title}
-                        {u.pillar !== "All" ? ` · ${u.pillar}` : ""}
+                      <div style={{ fontSize:11, color:tx2 }}>
+                        {u.subRole?(ROLES_CONFIG[selRole]?.subRoles[u.subRole]?.label||u.title):u.title}
+                        {u.pillar!=="All"?` · ${u.pillar}`:""}
                       </div>
                     </div>
-                    {active && <div style={{ width: 8, height: 8, borderRadius: "50%", background: rc, boxShadow: `0 0 10px ${rc}` }} />}
+                    {active && <div style={{ width:8, height:8, borderRadius:"50%", background:rc, boxShadow:`0 0 10px ${rc}` }} />}
                   </div>
                 );
               })}
             </div>
             <button onClick={() => selUser && startSignIn()} disabled={!selUser}
-              style={{ width: "100%", padding: "13px 0", borderRadius: 13, background: selUser ? `linear-gradient(135deg,${rc},${rc}BB)` : "rgba(255,255,255,.06)", color: selUser ? "#fff" : "rgba(255,255,255,.2)", border: "none", fontSize: 14, fontWeight: 700, cursor: selUser ? "pointer" : "not-allowed", transition: "all .22s", letterSpacing: "-.01em", boxShadow: selUser ? `0 8px 28px ${rc}30` : "none" }}>
-              {selUser ? `Continue as ${selUser.name.split(" ")[0]} →` : "Select an account"}
+              style={{ width:"100%", padding:"13px 0", borderRadius:13,
+                background:selUser?`linear-gradient(135deg,${rc},${rc}BB)`:isLight?"rgba(0,0,0,.07)":"rgba(255,255,255,.06)",
+                color:selUser?"#fff":isLight?"rgba(0,0,0,.28)":"rgba(255,255,255,.2)",
+                border:"none", fontSize:14, fontWeight:700, cursor:selUser?"pointer":"not-allowed",
+                transition:"all .22s", letterSpacing:"-.01em", boxShadow:selUser?`0 8px 28px ${rc}30`:"none" }}>
+              {selUser?`Continue as ${selUser.name.split(" ")[0]} →`:"Select an account"}
             </button>
-            <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: "rgba(255,255,255,.16)", letterSpacing: ".05em" }}>GUSTO SSO · OKTA · PERMISSIONS ENFORCED SERVER-SIDE</div>
+            <div style={{ textAlign:"center", marginTop:12, fontSize:11, letterSpacing:".05em",
+              color:isLight?"rgba(80,62,52,.3)":"rgba(255,255,255,.16)" }}>
+              GUSTO SSO · OKTA · PERMISSIONS ENFORCED SERVER-SIDE
+            </div>
           </div>
         </div>
       )}
 
       {/* ── SIGNING IN ─────────────────────────────── */}
       {phase === "signing" && (
-        <div style={{ textAlign: "center", animation: "fade-up .38s ease both", position: "relative", zIndex: 1, marginTop: -16 }}>
-          {/* Orbit rings around logo */}
-          <div style={{ position: "relative", display: "inline-block", marginBottom: 28 }}>
-            <div style={{ position: "absolute", inset: -18, borderRadius: "50%", border: `.5px solid ${rc}30`, animation: "spin 5s linear infinite" }} />
-            <div style={{ position: "absolute", inset: -30, borderRadius: "50%", border: `.5px solid rgba(255,255,255,.05)`, borderTopColor: rc + "55", borderRightColor: rc + "22", animation: "spin 9s linear infinite reverse" }} />
-            <div style={{ position: "absolute", inset: -44, borderRadius: "50%", border: `.5px solid rgba(255,255,255,.03)`, borderBottomColor: rc + "30", animation: "spin 14s linear infinite" }} />
+        <div style={{ textAlign:"center", animation:"fade-up .38s ease both", position:"relative", zIndex:1, marginTop:-16 }}>
+          <div style={{ position:"relative", display:"inline-block", marginBottom:28 }}>
+            <div style={{ position:"absolute", inset:-18, borderRadius:"50%", border:`.5px solid ${rc}30`, animation:"spin 5s linear infinite" }} />
+            <div style={{ position:"absolute", inset:-30, borderRadius:"50%", border:`.5px solid ${isLight?"rgba(0,0,0,.05)":"rgba(255,255,255,.05)"}`, borderTopColor:rc+"55", borderRightColor:rc+"22", animation:"spin 9s linear infinite reverse" }} />
+            <div style={{ position:"absolute", inset:-44, borderRadius:"50%", border:`.5px solid ${isLight?"rgba(0,0,0,.03)":"rgba(255,255,255,.03)"}`, borderBottomColor:rc+"30", animation:"spin 14s linear infinite" }} />
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: C.tx0, marginBottom: 6, letterSpacing: "-.02em" }}>
-            Signing in as <span style={{ color: rc }}>{selUser && selUser.name.split(" ")[0]}</span>
+          <div style={{ fontSize:17, fontWeight:700, color:tx0, marginBottom:6, letterSpacing:"-.02em" }}>
+            Signing in as <span style={{ color:rc }}>{selUser&&selUser.name.split(" ")[0]}</span>
           </div>
-          <div style={{ fontSize: 13, color: C.tx2, marginBottom: 28, minHeight: 16, animation: "fade-up .25s ease both" }} key={statusIdx}>
+          <div style={{ fontSize:13, color:tx2, marginBottom:28, minHeight:16, animation:"fade-up .25s ease both" }} key={statusIdx}>
             {SIGNING_STATUS[statusIdx]}
           </div>
-          <div style={{ width: 300, margin: "0 auto 12px", position: "relative" }}>
-            <div style={{ height: 4, background: "rgba(255,255,255,.06)", borderRadius: 4, overflow: "hidden", position: "relative" }}>
-              <div style={{ height: "100%", width: `${progress}%`, background: `linear-gradient(90deg,${C.kale},${rc})`, borderRadius: 4, transition: "width .1s ease", position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,transparent 0%,rgba(255,255,255,.38) 48%,transparent 100%)", animation: "shimmer 1.3s ease-in-out infinite" }} />
+          <div style={{ width:300, margin:"0 auto 12px", position:"relative" }}>
+            <div style={{ height:4, background:isLight?LTRACK:"rgba(255,255,255,.06)", borderRadius:4, overflow:"hidden", position:"relative" }}>
+              <div style={{ height:"100%", width:`${progress}%`, background:`linear-gradient(90deg,${C.kale},${rc})`, borderRadius:4, transition:"width .1s ease", position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg,transparent 0%,rgba(255,255,255,.38) 48%,transparent 100%)", animation:"shimmer 1.3s ease-in-out infinite" }} />
               </div>
             </div>
           </div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,.28)", letterSpacing: ".04em" }}>{Math.round(progress)}%</div>
+          <div style={{ fontSize:12, color:isLight?"rgba(80,62,52,.4)":"rgba(255,255,255,.28)", letterSpacing:".04em" }}>{Math.round(progress)}%</div>
         </div>
       )}
     </div>
@@ -7675,8 +7817,16 @@ export default function PrismPlatform() {
   const activeHoliday = getActiveHoliday();
   C = { ...THEMES[theme] };
   if (theme === "festive" && activeHoliday) {
-    C.guava = activeHoliday.guava; C.kale = activeHoliday.kale; C.amber = activeHoliday.amber;
-    C.bg = activeHoliday.bg;
+    // Reset to dark base so holiday replaces purple entirely — purple is preserved for no-holiday festive
+    const t = activeHoliday.intensity, base = THEMES.dark;
+    C = { ...base };
+    C.guava  = hexLerp(base.guava,  activeHoliday.guava, t);
+    C.kale   = hexLerp(base.kale,   activeHoliday.kale,  t);
+    C.amber  = hexLerp(base.amber,  activeHoliday.amber, t);
+    C.bg     = hexLerp(base.bg,     activeHoliday.bg,    t);
+    C.purple = hexLerp(base.purple, activeHoliday.kale,  t);
+    C.coral  = hexLerp(base.coral,  activeHoliday.guava, t);
+    C.green  = hexLerp(base.green,  activeHoliday.kale,  t);
   }
   const [founderOpen, setFounderOpen] = useState(false);
   const logoClicksRef = useRef(0);
@@ -7914,7 +8064,7 @@ export default function PrismPlatform() {
         .ps>*:nth-child(7){animation-delay:380ms} .ps>*:nth-child(8){animation-delay:440ms}
       `}</style>
 
-      {!auth && <LoginScreen onLogin={login} />}
+      {!auth && <LoginScreen onLogin={login} theme={theme} activeHoliday={activeHoliday} />}
 
       {/* AI Command Palette */}
       {cmdOpen && auth && (
